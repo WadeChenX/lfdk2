@@ -28,6 +28,7 @@
 
 #include "../lfdd/lfdd.h"
 #include "lfdk.h"
+#include "libpci.h"
 
 
 char read_buffer[ LFDK_MAX_READBUF ];
@@ -201,9 +202,7 @@ int ScanPCIDevice( int fd ) {
     //
     last_index = 0;
     for( bus = 0 ; bus < maxpcibus ; bus++ ) {
-    
         for( dev = 0 ; dev <= 0x1f ; dev++ ) {
-        
             for( fun = 0 ; fun <= 0x07 ; fun++ ) {
 
 
@@ -211,7 +210,6 @@ int ScanPCIDevice( int fd ) {
                 update_panels();
                 doupdate();
 
-            
                 lfdd_pci_data.bus = bus;
                 lfdd_pci_data.dev = dev;
                 lfdd_pci_data.fun = fun;
@@ -229,7 +227,6 @@ int ScanPCIDevice( int fd ) {
                     lfdd_pci_list[ last_index ].fun   = fun;
                     lfdd_pci_list[ last_index ].venid = (unsigned short int)lfdd_pci_data.buf;
 
-                    
                     //
                     // Read and record Device ID
                     //
@@ -262,490 +259,56 @@ int ScanPCIDevice( int fd ) {
     }
 
 
-    DestroyWin( PCILScreen, scan );
 }
 
 
-void WritePCIByteValue( fd ) {
+
+//int pci_list_handle;
+int pci_scan_handle;
+static int pci_scan_start_win(st_cmd_info *p_cmd, void *data);
+static int pci_scan_paint(st_cmd_info *p_cmd, void *data);
+static int pci_scan_destroy_win(st_cmd_info *p_cmd, void *data);
+static st_window_info  pci_scan_win_info  = {
+        .name = "PCI-SCAN",
+        .init = NULL,
+        .start_win = pci_scan_start_win,
+        .get_focus = NULL,
+        .lost_focus = NULL,
+        .paint = pci_scan_paint,
+        .destroy_win = pci_scan_destroy_win
+};
+//static st_window_info  pci_list_win_info  = {
+//        .name = "PCI-LIST",
+//        .init = pci_list_init,
+//        .start_win = pci_list_start_win
+//};
 
 
-    lfdd_pci_data.bus = lfdd_pci_list[ curr_index ].bus;
-    lfdd_pci_data.dev = lfdd_pci_list[ curr_index ].dev;
-    lfdd_pci_data.fun = lfdd_pci_list[ curr_index ].fun;
-    lfdd_pci_data.reg = x * LFDK_BYTE_PER_LINE + y;
-    lfdd_pci_data.buf = wbuf;
-
-    LFDD_IOCTL( fd, LFDD_PCI_WRITE_BYTE, lfdd_pci_data );
+static int pci_scan_destroy_win(st_cmd_info *p_cmd, void *data)
+{
+        DestroyWin( PCILScreen, scan );
+        return 0;
 }
 
+static int pci_scan_paint(st_cmd_info *p_cmd, void *data)
+{
+        if (request_window_state(&pci_scan_win_info, pci_scan_handle) == WM_FOREGROUND) {
+                ScanPCIDevice(p_cmd->fd_lfdd);
 
-void ClearPCIScreen() {
-
-    DestroyWin( PCIScreen, ven );
-    DestroyWin( PCIScreen, dev );
-    DestroyWin( PCIScreen, offset );
-    DestroyWin( PCIScreen, info );
-    DestroyWin( PCIScreen, rtitle );
-    DestroyWin( PCIScreen, value );
+                request_destroy_windows(&pci_scan_win_info, pci_scan_handle);
+        }
+        return 0;
 }
 
+static int pci_scan_start_win(st_cmd_info *p_cmd, void *data)
+{
+        int ret;
 
-void PrintPCIScreen( int fd ) {
+        request_windows_focus(&pci_scan_win_info, pci_scan_handle);
 
-    int i, j;
-
-
-    if( ibuf == KEY_UP ) {
-
-        if( x > 0 ) {
-
-            x--;
-        }
-
-        input = 0;
-    }
-    else if( ibuf == KEY_DOWN ) {
-
-        if( x < 15 ) {
-
-            x++;
-        }
-
-        input = 0;
-    }
-    else if( ibuf == KEY_LEFT ) {
-
-        if( y > 0 ) {
-
-            y--;
-        }
-
-        input = 0;
-    }
-    else if( ibuf == KEY_RIGHT ) {
-
-        if( y < 15 ) {
-
-            y++;
-        }
-
-        input = 0;
-    }
-    else if( ibuf == KEY_NPAGE ) {
-
-        if( (curr_index + 1) < last_index ) {
-
-            curr_index++;
-        }
-        else {
-
-            curr_index = 0;
-        }
-
-        input = 0;
-    }
-    else if( ibuf == KEY_PPAGE ) {
-
-        if( curr_index > 0 ) {
-
-            curr_index--;
-        }
-        else {
-
-            curr_index = last_index - 1;
-        }
-
-        input = 0;
-    }
-    else if( ibuf == 0x0a ) {
-
-        if( input ) {
-
-            input = 0;
-            WritePCIByteValue( fd );
-        }
-    }
-    else if ( ((ibuf >= '0') && (ibuf <= '9'))
-                || ((ibuf >= 'a') && (ibuf <= 'f'))
-                || ((ibuf >= 'A') && (ibuf <= 'F')) ) {
-
-        if( !input ) {
-
-            wbuf = 0x00;
-            input = 1;
-        }
-
-
-        wbuf <<= 4;
-        wbuf &= 0xf0;
-
-
-        if( ibuf <= '9' ) {
-
-            wbuf |= ibuf - 0x30;
-        }
-        else if( ibuf > 'F' ) {
-
-            wbuf |= ibuf - 0x60 + 9;
-        }
-        else {
-
-            wbuf |= ibuf - 0x40 + 9;
-        }
-    }
-
-
-    //
-    // Print Device Name
-    //
-    PrintFixedWin( PCIScreen, ven, 1, 70, 1, 1, CYAN_BLUE, "%70s", " " );
-    if( lfdd_pci_list[ curr_index ].ventxt[ 0 ] ) {
-
-        PrintFixedWin( PCIScreen, ven, 1, 70, 1, 1, CYAN_BLUE, "Vendor: %.62s", lfdd_pci_list[ curr_index ].ventxt );
-    }
-    else {
-
-        PrintFixedWin( PCIScreen, ven, 1, 70, 1, 1, CYAN_BLUE, "Unknown Vendor" );
-    }
-
-
-    PrintFixedWin( PCIScreen, dev, 1, 70, 2, 1, CYAN_BLUE, "%70s", " " );
-    if( lfdd_pci_list[ curr_index ].devtxt[ 0 ] ) {
-
-        PrintFixedWin( PCIScreen, dev, 1, 70, 2, 1, CYAN_BLUE, "Device: %.62s", lfdd_pci_list[ curr_index ].devtxt );
-    }
-    else {
-    
-        PrintFixedWin( PCIScreen, dev, 1, 70, 2, 1, CYAN_BLUE, "Unknown Device" );
-    }
-
-
-    //
-    // Print Offset Text
-    //
-    PrintFixedWin( PCIScreen, offset, 17, 52, 4, 1, RED_BLUE, "0000 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0" );
-
-
-    //
-    // Print PCI bus, device, function number
-    //
-    PrintFixedWin( PCIScreen, info, 1, 47, 22, 0, WHITE_BLUE, "Type: PCI    Bus %2.2X    Device %2.2X    Function %2.2X"
-                , lfdd_pci_list[ curr_index ].bus, lfdd_pci_list[ curr_index ].dev, lfdd_pci_list[ curr_index ].fun );
-
-
-    //
-    // Read PCI configuration space 256 bytes
-    //
-    lfdd_pci_data.bus = lfdd_pci_list[ curr_index ].bus;
-    lfdd_pci_data.dev = lfdd_pci_list[ curr_index ].dev;
-    lfdd_pci_data.fun = lfdd_pci_list[ curr_index ].fun;
-    lfdd_pci_data.reg = 0;
-    LFDD_IOCTL( fd, LFDD_PCI_READ_256BYTE, lfdd_pci_data );
-
-
-
-    //
-    // Print PCI information
-    //
-    if( !PCIScreen.rtitle ) {
-
-        PCIScreen.rtitle = newwin( 17, 24, 4, 56 );
-        PCIScreen.p_rtitle = new_panel( PCIScreen.rtitle );
-    }
-
-    mvwprintw( PCIScreen.rtitle, 0, 0, "" );
-    wbkgd( PCIScreen.rtitle, COLOR_PAIR( CYAN_BLUE ) );
-    wattrset( PCIScreen.rtitle, COLOR_PAIR( CYAN_BLUE ) | A_BOLD );
-
-    wprintw( PCIScreen.rtitle, "Refresh    : ON\n\n" );
-    wprintw( PCIScreen.rtitle, "Data Width : 8 bits\n\n" );
-
-    wprintw( PCIScreen.rtitle, "VID:DID = %4.4X:%4.4X\n", lfdd_pci_list[ curr_index ].venid, lfdd_pci_list[ curr_index ].devid );
-    wprintw( PCIScreen.rtitle, "Rev ID        : %2.2X\n", (unsigned char)lfdd_pci_data.mass_buf[ 0x08 ] );
-    wprintw( PCIScreen.rtitle, "Int Line (IRQ): %2.2X\n", (unsigned char)lfdd_pci_data.mass_buf[ 0x3c ] );
-    wprintw( PCIScreen.rtitle, "Int Pin       : %2.2X\n\n", (unsigned char)lfdd_pci_data.mass_buf[ 0x3c + 8 ] );
-
-    wprintw( PCIScreen.rtitle, "Mem: 00000000 00000000\n" );
-    wprintw( PCIScreen.rtitle, "Mem: 00000000 00000000\n" );
-    wprintw( PCIScreen.rtitle, "Mem: 00000000 00000000\n" );
-    wprintw( PCIScreen.rtitle, "Mem: 00000000 00000000\n" );
-    wprintw( PCIScreen.rtitle, "Mem: 00000000 00000000\n" );
-    wprintw( PCIScreen.rtitle, "Mem: 00000000 00000000\n\n" );
-
-    wprintw( PCIScreen.rtitle, "ROM: 00000000\n" );
-    wattrset( PCIScreen.rtitle, A_NORMAL );
-
-
-
-    //
-    // Print 256bytes PCI Configuration Space
-    //
-    if( !PCIScreen.value ) {
-
-        PCIScreen.value = newwin( 17, 47, 5, 6 );
-        PCIScreen.p_value = new_panel( PCIScreen.value );
-    }
-
-
-    wbkgd( PCIScreen.value, COLOR_PAIR( WHITE_BLUE ) );
-    mvwprintw( PCIScreen.value, 0, 0, "" );
-
-
-    for( i = 0 ; i < LFDK_BYTE_PER_LINE ; i ++ ) {
-
-        for( j = 0 ; j < LFDK_BYTE_PER_LINE ; j++ ) {
-    
-                
-            //
-            // Change Color Pair
-            //
-            if( y == j && x == i ) {
-              
-                if( input ) {
-                
-                    if( counter % 2 ) {
-                    
-                        wattrset( PCIScreen.value, COLOR_PAIR( YELLOW_RED ) | A_BOLD );
-                    }
-                    else {
-                    
-                        wattrset( PCIScreen.value, COLOR_PAIR( YELLOW_BLACK ) | A_BOLD );
-                    }
-                    
-                    counter++;
-                }
-                else {
-
-                    wattrset( PCIScreen.value, COLOR_PAIR( BLACK_YELLOW ) | A_BOLD ); 
-                }
-            }
-            else if( ((unsigned char)lfdd_pci_data.mass_buf[ (i * LFDK_BYTE_PER_LINE) + j ]) ) {
-           
-                wattrset( PCIScreen.value, COLOR_PAIR( YELLOW_BLUE ) | A_BOLD );            
-            }
-            else {
-            
-                wattrset( PCIScreen.value, COLOR_PAIR( WHITE_BLUE ) | A_BOLD );
-            }
-
-
-            //
-            // Handle input display
-            //
-            if( y == j && x == i ) {
-
-
-                if( input ) {
-                
-                    wprintw( PCIScreen.value, "%2.2X", (unsigned char)wbuf );
-                }
-                else {
-                
-                    wprintw( PCIScreen.value, "%2.2X", (unsigned char)lfdd_pci_data.mass_buf[ (i * LFDK_BYTE_PER_LINE) + j ] );
-                }
-            }
-            else {
-
-                wprintw( PCIScreen.value, "%2.2X", (unsigned char)lfdd_pci_data.mass_buf[ (i * LFDK_BYTE_PER_LINE) + j ] );
-            }
-
-
-            //
-            // End of color pair
-            //
-            wattrset( PCIScreen.value, A_NORMAL );
-
-
-            //
-            // Move to next byte
-            //
-            if( j != 15 ) {
-          
-                wprintw( PCIScreen.value, " " );
-            }
-        }
-    }
+        return ret;
 }
 
-
-void ClearPCILScreen( void ) {
-
-    DestroyWin( PCILScreen, title );
-    DestroyWin( PCILScreen, devname );
-    DestroyWin( PCILScreen, vendev );
-}
-
-
-void PrintPCILScreen( void ) {
-
-    int i;
-
-
-    //
-    // Adjust Light Bar and curr_index
-    //
-    if( (curr_index + rpp) > last_index ) {
-    
-        curr_index = last_index - rpp;
-        if( curr_index < 0 ) {
-        
-            curr_index = 0;
-        }
-    }
-
-
-    if( ibuf == KEY_UP ) {
-
-        if( lightbar > 0 ) {
-
-            lightbar--;
-        }
-        else {
-        
-            lightbar = 0;
-            if( curr_index > 0 ) {
-            
-                curr_index--;
-            }
-        }
-    }
-    else if( ibuf == KEY_DOWN ) {
-
-        if( last_index > rpp ) {
-        
-            if( (lightbar + 1) < rpp ) {
-        
-                lightbar++;
-            }
-            else {
-        
-                lightbar = rpp - 1;
-                if( (last_index - curr_index - 1) >= rpp ) {
-
-                    curr_index++; 
-                }
-            }
-        }
-        else {
-        
-            if( (lightbar + 1) < last_index ) {
-
-                lightbar++;
-            }
-        }
-    }
-    else if( ibuf == KEY_NPAGE ) {
-
-        if( (curr_index + rpp) <= (last_index - rpp) ) {
-
-            curr_index += rpp;
-        }
-        else {
-
-            curr_index = last_index - rpp;
-        }
-
-        lightbar = 0;
-    }
-    else if( ibuf == KEY_PPAGE ) {
-
-        if( (curr_index - rpp) >= 0 ) {
-
-            curr_index -= rpp;
-        }
-        else {
-
-            curr_index = 0;
-        }
-
-        lightbar = 0;
-    }
-    else if( ibuf == 0x0a ) {
-
-        curr_index += lightbar;
-        func = PCI_DEVICE_FUNC;
-        ClearPCILScreen();
-        goto pcil_done;
-    }
-
-
-    //
-    // Print Title
-    //
-    PrintFixedWin( PCILScreen, title, 1, 80, 1, 0, BLACK_GREEN, "Name                                              Vendor  Device  Bus# Dev# Fun#" );
-
-
-    //
-    // Print PCI device name
-    //
-    if( !PCILScreen.devname ) {
-
-        PCILScreen.devname = newwin( 20, 50, 2, 0 );
-        PCILScreen.p_devname = new_panel( PCILScreen.devname );
-    }
-
-
-    wbkgd( PCILScreen.devname, COLOR_PAIR( WHITE_BLUE ) );
-
-
-    mvwprintw( PCILScreen.devname, 0, 0, "" );
-    for( i = curr_index ; ((i < (curr_index + rpp)) && (i < last_index)) ; i++ ) {
-
-        if( (i - curr_index) == lightbar ) {
-        
-            wattrset( PCILScreen.devname, COLOR_PAIR( BLACK_YELLOW ) | A_BOLD );
-        }
-        else {
-        
-            wattrset( PCILScreen.devname, COLOR_PAIR( WHITE_BLUE ) | A_BOLD );
-        }
-
-
-        if( !lfdd_pci_list[ i ].ventxt[ 0 ] ) {
-            
-            wprintw( PCILScreen.devname, "%4.4X, ", lfdd_pci_list[ i ].venid );
-        }
-        else {
-            
-            wprintw( PCILScreen.devname, "%.12s, ", lfdd_pci_list[ i ].ventxt );
-        }
-            
-        if( !lfdd_pci_list[ i ].devtxt[ 0 ] ) {
-           
-            wprintw( PCILScreen.devname, "%4.4X\n", lfdd_pci_list[ i ].devid );
-        }
-        else {
-            
-            wprintw( PCILScreen.devname, "%.35s\n", lfdd_pci_list[ i ].devtxt );
-        }
-
-
-        wattrset( PCILScreen.devname, A_NORMAL );
-    }
-
-
-    if( !PCILScreen.vendev ) {
-
-        PCILScreen.vendev = newwin( 20, 30, 2, 50 );
-        PCILScreen.p_vendev = new_panel( PCILScreen.vendev );
-    }
-
-
-    wbkgd( PCILScreen.vendev, COLOR_PAIR( WHITE_BLUE ) );
-    wattrset( PCILScreen.vendev, COLOR_PAIR( WHITE_BLUE ) | A_BOLD );
-
-
-    mvwprintw( PCILScreen.vendev, 0, 0, "" );
-    for( i = curr_index ; ((i < (curr_index + rpp)) && (i < last_index)) ; i++ ) {
-
-        wprintw( PCILScreen.vendev, "%4.4X    %4.4X     %2.2X   %2.2X   %2.2X\n", lfdd_pci_list[ i ].venid, lfdd_pci_list[ i ].devid, lfdd_pci_list[ i ].bus, lfdd_pci_list[ i ].dev, lfdd_pci_list[ i ].fun );
-    }
-
-
-    wattrset( PCILScreen.vendev, A_NORMAL );
-
-pcil_done:
-    return;
-}
-
+//module_init(pci_list_win_info, pci_list_handle)
+module_init(pci_scan_win_info, pci_scan_handle)
 

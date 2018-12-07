@@ -1,7 +1,9 @@
 
 
 all:
-	mkdir bin
+	if ! [ -e bin ]; then \
+		mkdir bin; \
+	fi 
 	$(MAKE) -C lfdd
 	$(MAKE) -C lfdk
 	cp -f lfdd/lfdd_drv.ko bin

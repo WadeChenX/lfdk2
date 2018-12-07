@@ -14,24 +14,24 @@
  * GNU General Public License for more details.
  *
  */
+
+#include "list.h"
+
+#define ERROR_MIN  -32
+typedef enum error {
+        ERR_BUF_OVERFLOW = ERROR_MIN,
+        ERR_OPEN_DEV,
+        ERR_REQ_IO,
+        ERR_INVALID_PARAM,
+} error_t;
+
+
 #define LFDK_VERSION            "2.0.2"
 #define LFDK_PROGNAME           "lfdk"
 #define LFDK_VERTEXT            LFDK_PROGNAME" version "LFDK_VERSION", Linux Firmware Debug Kit"
-#define LFDK_MAX_PCIBUF         200
 #define LFDK_MAX_PATH           40
-#define LFDK_MAX_PCIBUS			256
 #define LFDK_MAX_READBUF        512
-#define LFDK_DEFAULT_PCINAME    "/usr/share/misc/pci.ids"
-#define LFDK_MAX_PCINAME        75
 #define LFDK_BYTE_PER_LINE		16
-
-#define LFDK_CMOS_RANGE_BYTES	256
-#define LFDK_CMOS_IO_START		0x70
-#define LFDK_CMOS_IO_END		0x72
-#define LFDK_CMOS_ADDR_PORT		0x70
-#define LFDK_CMOS_DATA_PORT		0x71
-#define LFDK_MEM_DEV			"/dev/mem"
-
 
 #define LFDD_IOCTL( FDESC, IOCTL_CMD, DATA ) {              \
                                                             \
@@ -42,7 +42,6 @@
         exit( 1 );                                          \
     }                                                       \
 }
-
 
 #define PrintWin( RESRC, NAME, LINE, COLUMN, X, Y, COLORPAIR, FORMAT, ARGS... ) {   \
                                                                                     \
@@ -84,18 +83,6 @@
     }                                   \
 }
 
-
-enum {
-
-    PCI_DEVICE_FUNC = 1,
-    PCI_LIST_FUNC,
-    MEM_SPACE_FUNC,
-    IO_SPACE_FUNC,
-	CMOS_SPACE_FUNC,
-	I2C_SPACE_FUNC,
-};
-
-
 enum {
 
     WHITE_RED = 1,
@@ -112,84 +99,65 @@ enum {
 };
 
 
-typedef struct {
+typedef enum win_state {
+        WM_NOT_START = 0,
+        WM_INITED,
+        WM_STARTED,
+        WM_POST_STARTED,
+        WM_DISABLED,
+        WM_BACKGROUND,
+        WM_FOREGROUND,
+        WM_DESTROYED,
+        WM_EXIT,
+} WIN_STATE;
 
-    PANEL   *p_bg;
-    PANEL   *p_logo;
-    PANEL   *p_copyright;
-    PANEL   *p_help;
-    PANEL   *p_time;
-
-    WINDOW  *bg;
-    WINDOW  *logo;
-    WINDOW  *copyright;
-    WINDOW  *help;
-    WINDOW  *time;
-
-} BasePanel;
-
-
-typedef struct {
-
-    PANEL *p_ven;
-    PANEL *p_dev;
-    PANEL *p_offset;
-    PANEL *p_info;
-    PANEL *p_rtitle;
-    PANEL *p_value;
-
-    WINDOW *ven;
-    WINDOW *dev;
-    WINDOW *offset;
-    WINDOW *info;
-    WINDOW *rtitle;
-    WINDOW *value;
-
-} PCIPanel;
-
+typedef enum message {
+        MSG_NO_USED = 0,
+        MSG_NEED_FOCUS,
+        MSG_RELEASE_FOCUS,
+        MSG_DESTROY_WINDOW,
+} MESSAGE;
 
 typedef struct {
-
-    PANEL *p_title;
-    PANEL *p_devname;
-    PANEL *p_vendev;
-    PANEL *p_scan;
-    PANEL *p_error;
-
-    WINDOW *title;
-    WINDOW *devname;
-    WINDOW *vendev;
-    WINDOW *scan;
-    WINDOW *error;
-
-} PCILPanel;
-
+        int fd_lfdd;
+} st_cmd_info;
 
 typedef struct {
-
-    PANEL *p_offset;
-    PANEL *p_info;
-    PANEL *p_value;
-    PANEL *p_ascii;
-
-    WINDOW *offset;
-    WINDOW *info;
-    WINDOW *value;
-    WINDOW *ascii;
-
-} MemPanel;
-
+        char name[32];
+        uint32_t short_key;
+        int (*init)(st_cmd_info *p_cmd, void *data);
+        int (*start_win)(st_cmd_info *p_cmd, void *data);
+        int (*post_start_win)(st_cmd_info *p_cmd, void *data);
+        int (*lost_focus)(st_cmd_info *p_cmd, void *data);
+        int (*get_focus)(st_cmd_info *p_cmd, void *data);
+        int (*paint)(st_cmd_info *p_cmd, void *data);
+        int (*key_press)(st_cmd_info *p_cmd, void *data);
+        int (*destroy_win)(st_cmd_info *p_cmd, void *data);
+        int (*module_exit)(st_cmd_info *p_cmd, void *data);
+}st_window_info;
 
 typedef struct {
+        st_window_info *p_win;
+        int win_state;
+} st_win_info;
 
-    unsigned short int      venid;
-    unsigned short int      devid;
-    unsigned char           bus;
-    unsigned char           dev;
-    unsigned char           fun;
-    unsigned char           ventxt[ LFDK_MAX_PCINAME + 1 ];
-    unsigned char           devtxt[ LFDK_MAX_PCINAME + 1 ];
+typedef struct message_info {
+        MESSAGE msg;
+        int sender_handle;
+        void *data;
+}msg_info;
 
-} PCIData;
 
+
+int register_windows(st_window_info *p_win);
+int request_windows_focus(st_window_info *p_win, int handle);
+int request_destroy_windows(st_window_info *p_win, int handle);
+WIN_STATE request_window_state(st_window_info *p_win, int handle);
+int release_windows_focus(st_window_info *p_win, int handle);
+
+#define module_init(info, handle)                                                 \
+static void __attribute__((constructor)) do_lfdk_init_ ## info(void)            \
+{                                                                                   \
+            handle = register_windows(&info);                                             \
+}
 

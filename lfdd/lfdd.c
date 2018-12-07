@@ -14,6 +14,7 @@
  * GNU General Public License for more details.
  *
  */
+#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/errno.h>
@@ -25,9 +26,13 @@
 
 #include <asm/io.h>
 #include <asm/irq.h>
-#include <asm/uaccess.h>
 
-#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
+#include <asm/uaccess.h>
+#else
+#include <linux/uaccess.h>
+#endif
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 4, 0)
 #include <asm/system.h>
 #endif

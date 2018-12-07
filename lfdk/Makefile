@@ -16,7 +16,8 @@ STRIP				=   $(CROSS_COMPILE)strip
 CFLAGS				=
 LDFLAGS				=   -lpanel -lncurses -g3
 OBJS				=   lfdk
-LIBS				=	libmem.c libpci.c libio.c libcmos.c
+#LIBS				=	libmem.c libpci.c libio.c libcmos.c libbase.c
+LIBS				=	libpci.c libbase.c
 
 
 all:

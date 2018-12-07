@@ -29,9 +29,9 @@
 
 #include "../lfdd/lfdd.h"
 #include "lfdk.h"
+#include "libpci.h"
 
 
-static BasePanel BaseScreen;
 
 
 int x = 0, y = 0;
@@ -40,14 +40,24 @@ int input = 0;
 unsigned int counter = 0;
 int ibuf;
 char wbuf;
-int func = PCI_DEVICE_FUNC;
 int maxpcibus = 255;
 char pciname[ LFDK_MAX_PATH ];
 char enter_mem = 0;
 
+#define WINDOWS_POOL_SIZE  32
+#define MSG_SIZE 32
+typedef struct windows_manager_info {
+        st_cmd_info  cmd_info;
+        st_win_info windows_pool[WINDOWS_POOL_SIZE];
+        int windows_used_len;
+        msg_info   msg_box[MSG_SIZE];
+        int msg_used_len;
+        int cur_fore_window_handle;
+} st_windows_manager_info;
 
-void PrintBaseScreen( void );
-
+st_windows_manager_info win_manager = {
+        .cur_fore_window_handle = -1,
+};
 
 static void usage( void ) {
 
@@ -78,27 +88,267 @@ void InitColorPairs( void ) {
 }
 
 
-void PrintBaseScreen( void ) {
 
+int register_windows(st_window_info *p_win) 
+{
+        int handle;
 
-    //
-    // Background Color
-    //
-    PrintWin( BaseScreen, bg, 23, 80, 0, 0, WHITE_BLUE, "" );
+        if (win_manager.windows_used_len + 1 > WINDOWS_POOL_SIZE) {
+                return ERR_BUF_OVERFLOW;
+        }
 
+        win_manager.windows_pool[win_manager.windows_used_len].p_win = p_win;
+        win_manager.windows_pool[win_manager.windows_used_len].win_state = WM_NOT_START;
+        handle = win_manager.windows_used_len;
+        win_manager.windows_used_len++;
 
-    //
-    // Base Screen
-    //
-    PrintWin( BaseScreen, logo, 1, 80, 0, 0, WHITE_RED, "Linux Firmware Debug Kit "LFDK_VERSION );
-    PrintWin( BaseScreen, copyright, 1, 32, 0, 48, WHITE_RED, "Merck Hung <merckhung@gmail.com>" );
-    PrintWin( BaseScreen, help, 1, 80, 23, 0, BLACK_WHITE, "(Q)uit (P)CI (M)emory (I)O CM(O)S" );
-
-
-    update_panels();
-    doupdate();
+        return handle;
 }
 
+int request_windows_focus(st_window_info *p_win, int handle)
+{
+        st_win_info *p_win_info = NULL;
+
+        if (!p_win || handle < 0) return ERR_INVALID_PARAM;
+        if (handle >= win_manager.windows_used_len) return ERR_INVALID_PARAM;
+
+        p_win_info = &win_manager.windows_pool[handle];
+
+        if (strcmp(p_win_info->p_win->name, p_win->name)) {
+                return ERR_INVALID_PARAM;
+        }
+
+        if (win_manager.msg_used_len >= MSG_SIZE) {
+                return ERR_BUF_OVERFLOW;
+        }
+
+        win_manager.msg_box[win_manager.msg_used_len].msg = MSG_NEED_FOCUS;
+        win_manager.msg_box[win_manager.msg_used_len].sender_handle = handle;
+        win_manager.msg_used_len++;
+
+        return 0;
+}
+
+int request_destroy_windows(st_window_info *p_win, int handle)
+{
+        st_win_info *p_win_info = NULL;
+
+        if (!p_win || handle < 0) return ERR_INVALID_PARAM;
+        if (handle >= win_manager.windows_used_len) return ERR_INVALID_PARAM;
+
+        p_win_info = &win_manager.windows_pool[handle];
+
+        if (strcmp(p_win_info->p_win->name, p_win->name)) {
+                return ERR_INVALID_PARAM;
+        }
+
+        if (win_manager.msg_used_len >= MSG_SIZE) {
+                return ERR_BUF_OVERFLOW;
+        }
+
+        win_manager.msg_box[win_manager.msg_used_len].msg = MSG_DESTROY_WINDOW;
+        win_manager.msg_box[win_manager.msg_used_len].sender_handle = handle;
+        win_manager.msg_used_len++;
+
+}
+
+int release_windows_focus(st_window_info *p_win, int handle)
+{
+        st_win_info *p_win_info = NULL;
+
+        if (!p_win || handle < 0) return ERR_INVALID_PARAM;
+        if (handle >= win_manager.windows_used_len) return ERR_INVALID_PARAM;
+
+        p_win_info = &win_manager.windows_pool[handle];
+
+        if (strcmp(p_win_info->p_win->name, p_win->name)) {
+                return ERR_INVALID_PARAM;
+        }
+
+        if (win_manager.msg_used_len >= MSG_SIZE) {
+                return ERR_BUF_OVERFLOW;
+        }
+
+        win_manager.msg_box[win_manager.msg_used_len].msg = MSG_RELEASE_FOCUS;
+        win_manager.msg_box[win_manager.msg_used_len].sender_handle = handle;
+        win_manager.msg_used_len++;
+
+        return 0;
+}
+
+WIN_STATE request_window_state(st_window_info *p_win, int handle)
+{
+        st_win_info *p_win_info = NULL;
+
+        if (!p_win || handle < 0) return ERR_INVALID_PARAM;
+        if (handle >= win_manager.windows_used_len) return ERR_INVALID_PARAM;
+
+        p_win_info = &win_manager.windows_pool[handle];
+
+        if (strcmp(p_win_info->p_win->name, p_win->name)) {
+                return ERR_INVALID_PARAM;
+        }
+
+        return p_win_info->win_state;
+}
+
+static int switch_key_press(int key)
+{
+        int i;
+        int found = 0;
+        st_window_info *p_window = NULL;
+
+        for (i=0; i<win_manager.windows_used_len; i++) {
+                if (win_manager.windows_pool[i].win_state != WM_BACKGROUND)
+                        continue;
+
+                p_window = win_manager.windows_pool[i].p_win;
+                if (p_window->short_key == (uint32_t)key) {
+                        request_windows_focus(p_window, i);
+                        found = 1;
+                }
+                break;
+        }
+        return found;
+}
+
+static int handle_key_event(int key)
+{
+        int i;
+
+        for (i=0; i<win_manager.windows_used_len; i++) {
+                if (win_manager.windows_pool[i].win_state != WM_FOREGROUND)
+                        continue;
+                if (win_manager.windows_pool[i].p_win->key_press)
+                        win_manager.windows_pool[i].p_win->key_press(&win_manager.cmd_info, &key);
+                break;
+        }
+        return 0;
+}
+
+static int handle_message_event()
+{
+        int i;
+        msg_info msg_tmp;
+        st_win_info *p_cur_wnd=NULL, *p_next_wnd=NULL;
+
+        while (win_manager.msg_used_len) {
+                win_manager.msg_used_len--;
+                msg_tmp = win_manager.msg_box[win_manager.msg_used_len];
+                //clear the end unit
+                win_manager.msg_box[win_manager.msg_used_len].msg = MSG_NO_USED;
+                win_manager.msg_box[win_manager.msg_used_len].sender_handle = -1;
+                win_manager.msg_box[win_manager.msg_used_len].data = NULL;
+                //handle message
+                switch(msg_tmp.msg) {
+                        case MSG_NEED_FOCUS:
+                                if (msg_tmp.sender_handle == win_manager.cur_fore_window_handle) {
+                                        // foreground module no need to switch 
+                                        continue;
+                                }
+                                if (win_manager.cur_fore_window_handle >= 0) {
+                                        p_cur_wnd = &win_manager.windows_pool[win_manager.cur_fore_window_handle];
+                                }
+                                p_next_wnd = &win_manager.windows_pool[msg_tmp.sender_handle];
+                                //lost focust event
+                                if (p_cur_wnd) {
+                                        if (p_cur_wnd->p_win->lost_focus) 
+                                                p_cur_wnd->p_win->lost_focus(&win_manager.cmd_info, NULL);
+                                        p_cur_wnd->win_state = WM_BACKGROUND;
+                                }
+                                //got focus event
+                                win_manager.cur_fore_window_handle = msg_tmp.sender_handle;
+                                p_next_wnd->win_state = WM_FOREGROUND;
+                                if (p_next_wnd->p_win->get_focus)
+                                        p_next_wnd->p_win->get_focus(&win_manager.cmd_info, NULL);
+
+                                break;
+
+                        case MSG_RELEASE_FOCUS:
+                                if (win_manager.cur_fore_window_handle != msg_tmp.sender_handle) {
+                                        // TODO: I think bug here ...
+                                }
+                                p_next_wnd = &win_manager.windows_pool[msg_tmp.sender_handle];
+                                if (p_next_wnd->win_state == WM_FOREGROUND) {
+                                        if (p_next_wnd->p_win->lost_focus) {
+                                                p_next_wnd->p_win->lost_focus(&win_manager.cmd_info, NULL);
+                                        }
+                                        p_next_wnd->win_state = WM_BACKGROUND;
+                                        win_manager.cur_fore_window_handle = -1;
+                                }
+
+                                break;
+
+                        case MSG_DESTROY_WINDOW:
+                                p_next_wnd = &win_manager.windows_pool[msg_tmp.sender_handle];
+                                if (msg_tmp.sender_handle == win_manager.cur_fore_window_handle)
+                                        win_manager.cur_fore_window_handle = -1;
+                                if (p_next_wnd->p_win->destroy_win)
+                                        p_next_wnd->p_win->destroy_win(&win_manager.cmd_info, NULL);
+                                p_next_wnd->win_state = WM_DESTROYED;
+
+                                break;
+
+                        default:
+                                ;;
+                }
+
+        }
+        return 0;
+}
+
+static int handle_paint_windows()
+{
+        int i;
+        st_win_info *p_wind = NULL;
+
+        //paint background 
+        for (i=0; i<win_manager.windows_used_len; i++) {
+                if (win_manager.windows_pool[i].win_state != WM_BACKGROUND)
+                        continue;
+                if (win_manager.windows_pool[i].p_win->paint)
+                        win_manager.windows_pool[i].p_win->paint(&win_manager.cmd_info, NULL);
+
+        }
+        //paint foreground
+        if (win_manager.cur_fore_window_handle >= 0) {
+                p_wind = &win_manager.windows_pool[win_manager.cur_fore_window_handle];
+                if (p_wind->p_win->paint) {
+                        p_wind->p_win->paint(&win_manager.cmd_info, NULL);
+                }
+        }
+        return 0;
+}
+
+static int handle_destroy_windows()
+{
+        int i;
+
+        for (i=0; i<win_manager.windows_used_len; i++) {
+                if (win_manager.windows_pool[i].win_state == WM_DESTROYED ||
+                                win_manager.windows_pool[i].win_state == WM_EXIT)
+                        continue;
+
+                if (win_manager.windows_pool[i].p_win->destroy_win)
+                        win_manager.windows_pool[i].p_win->destroy_win(&win_manager.cmd_info, NULL);
+                win_manager.windows_pool[i].win_state = WM_DESTROYED;
+        }
+        return 0;
+}
+
+static int handle_module_exit()
+{
+        int i;
+        for (i=0; i<win_manager.windows_used_len; i++) {
+                if (win_manager.windows_pool[i].win_state == WM_EXIT)
+                        continue;
+
+                if (win_manager.windows_pool[i].p_win->module_exit)
+                        win_manager.windows_pool[i].p_win->module_exit(&win_manager.cmd_info, NULL);
+                win_manager.windows_pool[i].win_state = WM_EXIT;
+        }
+        return 0;
+}
 
 int main( int argc, char **argv ) {
 
@@ -118,39 +368,27 @@ int main( int argc, char **argv ) {
 
 
     while( (c = getopt( argc, argv, "b:n:d:h" )) != EOF ) {
-
         switch( c ) {
-        
-
             //
             // Change default path of device
             //
             case 'd' :
-
                 strncpy( device, optarg, LFDK_MAX_PATH );
                 break;
-
             //
             // Change default path of PCI name database
             //
             case 'n' :
-
                 strncpy( pciname, optarg, LFDK_MAX_PATH );
                 break;
 
             case 'b' :
-
                 maxpcibus = atoi( optarg );
                 if( maxpcibus >= LFDK_MAX_PCIBUS ) {
-                
                     fprintf( stderr, "Maximum PCI Bus value must be less than %d\n", LFDK_MAX_PCIBUS );
                     return 1;
                 }
                 break;
-
-            case 'v' :
-                break;
-
             case 'h' :
             default:
                 usage();
@@ -164,21 +402,29 @@ int main( int argc, char **argv ) {
 	//
     fd = open( device, O_RDWR );
     if( fd < 0 ) {
-
         fprintf( stderr, "Cannot open device: %s\n", device );
-        return 1;
+        ret = ERR_OPEN_DEV;
+        goto err_open_dev;
     }
+    win_manager.cmd_info.fd_lfdd = fd;
 
 
 	//
     // Enable IO Permission
 	//
-    if( ioperm( LFDK_CMOS_IO_START, LFDK_CMOS_IO_END, 1 ) ) {
+    //if( ioperm( LFDK_CMOS_IO_START, LFDK_CMOS_IO_END, 1 ) ) {
 
-        fprintf( stderr, "Failed to Execute ioperm()\n" );
-		close( fd );
-		return 1;
+    //    fprintf( stderr, "Failed to Execute ioperm()\n" );
+    //    ret = ERR_REQ_IO;
+    //    goto err_request_io;
+    //}
+
+    for (i=0; i<win_manager.windows_used_len; i++) {
+            if (win_manager.windows_pool[i].p_win->init)
+                    win_manager.windows_pool[i].p_win->init(&win_manager.cmd_info, NULL);
+            win_manager.windows_pool[i].win_state = WM_INITED;
     }
+
 
 
     //
@@ -198,165 +444,68 @@ int main( int argc, char **argv ) {
     //
     InitColorPairs();
 
+    for (i=0; i<win_manager.windows_used_len; i++) {
+            if (win_manager.windows_pool[i].win_state != WM_INITED)
+                    continue;
+            if (win_manager.windows_pool[i].p_win->start_win)
+                    win_manager.windows_pool[i].p_win->start_win(&win_manager.cmd_info, NULL);
+            win_manager.windows_pool[i].win_state = WM_STARTED;
+    }
+
+    for (i=0; i<win_manager.windows_used_len; i++) {
+            if (win_manager.windows_pool[i].win_state != WM_STARTED)
+                    continue;
+            if (win_manager.windows_pool[i].p_win->post_start_win)
+                    win_manager.windows_pool[i].p_win->post_start_win(&win_manager.cmd_info, NULL);
+            win_manager.windows_pool[i].win_state = WM_BACKGROUND;
+    }
 
     //
     // Prepare Base Screen
     //
-    PrintBaseScreen();
+    //PrintBaseScreen();
 
+    doupdate();
 
-    //
-    // Scan PCI devices
-    //
-    ret=ScanPCIDevice( fd );
+    for( ; ; ) {
+            //handle keyEvent
+            ibuf = getch();
+            //if (ibuf > 0) 
+            //        printf("%s - %d\r\n", keyname(ibuf), ibuf);
+            if( (ibuf == 'q') || (ibuf == 'Q') ) {
+                    //
+                    // Exit when ESC pressed
+                    //
+                    break;
+            }
+            if (!switch_key_press(ibuf)) {
+                    handle_key_event(ibuf);
+            }
 
-    if(ret==0)
-    {
-		for( ; ; ) {
+            //handle message event
+            handle_message_event();
 
+            //paint window
+            handle_paint_windows();
 
-			ibuf = getch();
-			if( (ibuf == 'q') || (ibuf == 'Q') ) {
+            // update window
+            doupdate();
 
-				//
-				// Exit when ESC pressed
-				//
-				break;
-			}
-
-
-			//
-			// Major function switch key binding
-			//
-			if( (ibuf == 'p') || (ibuf == 'P') ) {
-
-				func = PCI_LIST_FUNC;
-				ClearPCIScreen();
-				ClearMemScreen();
-				ClearIOScreen();
-				ClearCmosScreen();
-				continue;
-			}
-			else if( (ibuf == 'm') || (ibuf == 'M') ) {
-
-				enter_mem = 1;
-				func = MEM_SPACE_FUNC;
-				ClearPCIScreen();
-				ClearPCILScreen();
-				ClearIOScreen();
-				ClearCmosScreen();
-				continue;
-			}
-			else if( (ibuf == 'i') || (ibuf == 'I') ) {
-
-				enter_mem = 1;
-				func = IO_SPACE_FUNC;
-				ClearPCIScreen();
-				ClearPCILScreen();
-				ClearMemScreen();
-				ClearCmosScreen();
-				continue;
-			}
-			else if( (ibuf == 'o') || (ibuf == 'O') ) {
-
-				enter_mem = 1;
-				func = CMOS_SPACE_FUNC;
-				ClearPCIScreen();
-				ClearPCILScreen();
-				ClearMemScreen();
-				ClearIOScreen();
-				continue;
-			}
-	/*
-			else if( ibuf == '2' ) {
-
-				enter_mem = 1;
-				func = I2C_SPACE_FUNC;
-				ClearPCIScreen();
-				ClearPCILScreen();
-				ClearMemScreen();
-				ClearIOScreen();
-				ClearCmosScreen();
-				continue;
-			}
-	*/
-
-
-			//
-			// Update timer
-			//
-			time( &timer );
-			nowtime = localtime( &timer );
-			last_sec = nowtime->tm_sec;
-
-
-			// Skip redundant update of timer
-			if( last_sec == nowtime->tm_sec ) {
-
-				PrintFixedWin( BaseScreen, time, 1, 8, 23, 71, BLACK_WHITE, "%2.2d:%2.2d:%2.2d", nowtime->tm_hour, nowtime->tm_min,  nowtime->tm_sec );
-			}
-
-
-			//
-			// Major Functions
-			//
-			switch( func ) {
-
-				case PCI_DEVICE_FUNC:
-
-					PrintPCIScreen( fd );
-					break;
-
-				case PCI_LIST_FUNC:
-
-					PrintPCILScreen();
-					break;
-
-				case MEM_SPACE_FUNC:
-
-					PrintMemScreen( fd );
-					break;
-
-				case IO_SPACE_FUNC:
-
-					PrintIOScreen( fd );
-					break;
-
-				case CMOS_SPACE_FUNC:
-
-					PrintCmosScreen( fd );
-					break;
-
-				case I2C_SPACE_FUNC:
-
-					PrintCmosScreen( fd );
-					break;
-
-				default:
-					break;
-			}
-
-
-			//
-			// Refresh Screen
-			//
-			update_panels();
-			doupdate();
-
-
-			usleep( 1000 );
-		}
+            usleep( 1000 );
     }
 
+    //destroy windows 
+    handle_destroy_windows();
+
+    //module exit
+    handle_module_exit();
+
+err_out:
     endwin();
+//err_request_io:
     close( fd );
-
-
-    fprintf( stderr, "\n" );
-    usage();
-
-
-    return 0;
+err_open_dev:
+    return ret;
 }
 
 
