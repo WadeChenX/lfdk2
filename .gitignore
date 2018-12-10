@@ -8,3 +8,5 @@ bin/
 *.order
 .tmp_versions/
 *.symvers
+lfdk/lfdk
+*.log

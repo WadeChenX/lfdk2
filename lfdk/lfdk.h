@@ -15,12 +15,19 @@
  *
  */
 
+#ifndef __LFDK_H__
+#define __LFDK_H__
+
+#include <stdint.h>
+
 #include "list.h"
+
 
 #define ERROR_MIN  -32
 typedef enum error {
         ERR_BUF_OVERFLOW = ERROR_MIN,
         ERR_OPEN_DEV,
+        ERR_OPEN_FILE,
         ERR_REQ_IO,
         ERR_INVALID_PARAM,
 } error_t;
@@ -118,8 +125,10 @@ typedef enum message {
         MSG_DESTROY_WINDOW,
 } MESSAGE;
 
+
 typedef struct {
         int fd_lfdd;
+        int debug_lv;
 } st_cmd_info;
 
 typedef struct {
@@ -147,6 +156,16 @@ typedef struct message_info {
         void *data;
 }msg_info;
 
+#define WINDOWS_POOL_SIZE  32
+#define MSG_SIZE 32
+typedef struct windows_manager_info {
+        st_cmd_info  cmd_info;
+        st_win_info windows_pool[WINDOWS_POOL_SIZE];
+        int windows_used_len;
+        msg_info   msg_box[MSG_SIZE];
+        int msg_used_len;
+        int cur_fore_window_handle;
+} st_windows_manager_info;
 
 
 int register_windows(st_window_info *p_win);
@@ -161,3 +180,4 @@ static void __attribute__((constructor)) do_lfdk_init_ ## info(void)            
             handle = register_windows(&info);                                             \
 }
 
+#endif //__LFDK_H__

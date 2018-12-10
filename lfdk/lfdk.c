@@ -14,6 +14,9 @@
  * GNU General Public License for more details.
  *
  */
+
+#define TAG "LFDK"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +29,8 @@
 
 #include <ncurses.h>
 #include <panel.h>
+
+#include "debug.h"
 
 #include "../lfdd/lfdd.h"
 #include "lfdk.h"
@@ -44,19 +49,12 @@ int maxpcibus = 255;
 char pciname[ LFDK_MAX_PATH ];
 char enter_mem = 0;
 
-#define WINDOWS_POOL_SIZE  32
-#define MSG_SIZE 32
-typedef struct windows_manager_info {
-        st_cmd_info  cmd_info;
-        st_win_info windows_pool[WINDOWS_POOL_SIZE];
-        int windows_used_len;
-        msg_info   msg_box[MSG_SIZE];
-        int msg_used_len;
-        int cur_fore_window_handle;
-} st_windows_manager_info;
 
 st_windows_manager_info win_manager = {
         .cur_fore_window_handle = -1,
+        .cmd_info = {
+                .debug_lv = DEBUG_INFO,
+        },
 };
 
 static void usage( void ) {
@@ -226,6 +224,52 @@ static int handle_key_event(int key)
         return 0;
 }
 
+static int handle_init_event()
+{
+        int i;
+
+        log_i("%s\n", __func__);
+
+        for (i=0; i<win_manager.windows_used_len; i++) {
+                if (win_manager.windows_pool[i].p_win->init)
+                        win_manager.windows_pool[i].p_win->init(&win_manager.cmd_info, NULL);
+                win_manager.windows_pool[i].win_state = WM_INITED;
+        }
+        return 0;
+}
+
+static int handle_start_win_event()
+{
+        int i;
+
+        log_i("%s\n", __func__);
+
+        for (i=0; i<win_manager.windows_used_len; i++) {
+                if (win_manager.windows_pool[i].win_state != WM_INITED)
+                        continue;
+                if (win_manager.windows_pool[i].p_win->start_win)
+                        win_manager.windows_pool[i].p_win->start_win(&win_manager.cmd_info, NULL);
+                win_manager.windows_pool[i].win_state = WM_STARTED;
+        }
+        return 0;
+}
+
+static int handle_post_start_win_event()
+{
+        int i;
+
+        log_i("%s\n", __func__);
+
+        for (i=0; i<win_manager.windows_used_len; i++) {
+                if (win_manager.windows_pool[i].win_state != WM_STARTED)
+                        continue;
+                if (win_manager.windows_pool[i].p_win->post_start_win)
+                        win_manager.windows_pool[i].p_win->post_start_win(&win_manager.cmd_info, NULL);
+                win_manager.windows_pool[i].win_state = WM_BACKGROUND;
+        }
+        return 0;
+}
+
 static int handle_message_event()
 {
         int i;
@@ -358,6 +402,7 @@ int main( int argc, char **argv ) {
     struct tm *nowtime;
     time_t timer;
     int last_sec;
+    int debug_level;
 
 
     //
@@ -367,7 +412,7 @@ int main( int argc, char **argv ) {
     strncpy( pciname, LFDK_DEFAULT_PCINAME, LFDK_MAX_PATH );
 
 
-    while( (c = getopt( argc, argv, "b:n:d:h" )) != EOF ) {
+    while( (c = getopt( argc, argv, "D:b:n:d:h" )) != EOF ) {
         switch( c ) {
             //
             // Change default path of device
@@ -389,12 +434,29 @@ int main( int argc, char **argv ) {
                     return 1;
                 }
                 break;
+            case 'D':
+                debug_level = atoi(optarg);
+                if (debug_level < DEBUG_MAX) {
+                        win_manager.cmd_info.debug_lv = debug_level;
+                }
+                break;
             case 'h' :
             default:
                 usage();
                 return 1;
         }
     }
+
+    //init debug function
+    if (win_manager.cmd_info.debug_lv) {
+            ret = debug_init();
+            if (ret) {
+                    fprintf(stderr, "Init debug function error\n");
+                    goto err_init_dbg;
+            }
+            log_c("Debug init done\n");
+    }
+
 
 
     //
@@ -419,12 +481,7 @@ int main( int argc, char **argv ) {
     //    goto err_request_io;
     //}
 
-    for (i=0; i<win_manager.windows_used_len; i++) {
-            if (win_manager.windows_pool[i].p_win->init)
-                    win_manager.windows_pool[i].p_win->init(&win_manager.cmd_info, NULL);
-            win_manager.windows_pool[i].win_state = WM_INITED;
-    }
-
+    handle_init_event();
 
 
     //
@@ -444,21 +501,9 @@ int main( int argc, char **argv ) {
     //
     InitColorPairs();
 
-    for (i=0; i<win_manager.windows_used_len; i++) {
-            if (win_manager.windows_pool[i].win_state != WM_INITED)
-                    continue;
-            if (win_manager.windows_pool[i].p_win->start_win)
-                    win_manager.windows_pool[i].p_win->start_win(&win_manager.cmd_info, NULL);
-            win_manager.windows_pool[i].win_state = WM_STARTED;
-    }
+    handle_start_win_event();
 
-    for (i=0; i<win_manager.windows_used_len; i++) {
-            if (win_manager.windows_pool[i].win_state != WM_STARTED)
-                    continue;
-            if (win_manager.windows_pool[i].p_win->post_start_win)
-                    win_manager.windows_pool[i].p_win->post_start_win(&win_manager.cmd_info, NULL);
-            win_manager.windows_pool[i].win_state = WM_BACKGROUND;
-    }
+    handle_post_start_win_event();
 
     //
     // Prepare Base Screen
@@ -505,6 +550,8 @@ err_out:
 //err_request_io:
     close( fd );
 err_open_dev:
+    debug_exit();
+err_init_dbg:
     return ret;
 }
 
