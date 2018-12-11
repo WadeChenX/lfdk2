@@ -38,7 +38,6 @@ typedef enum error {
 #define LFDK_VERTEXT            LFDK_PROGNAME" version "LFDK_VERSION", Linux Firmware Debug Kit"
 #define LFDK_MAX_PATH           40
 #define LFDK_MAX_READBUF        512
-#define LFDK_BYTE_PER_LINE		16
 
 #define LFDD_IOCTL( FDESC, IOCTL_CMD, DATA ) {              \
                                                             \
@@ -48,16 +47,6 @@ typedef enum error {
         fprintf( stderr, "Cannot execute command\n\n" );    \
         exit( 1 );                                          \
     }                                                       \
-}
-
-#define PrintWin( RESRC, NAME, LINE, COLUMN, X, Y, COLORPAIR, FORMAT, ARGS... ) {   \
-                                                                                    \
-    RESRC.NAME = newwin( LINE, COLUMN, X, Y );                                      \
-    RESRC.p_##NAME = new_panel( RESRC.NAME );                                       \
-    wbkgd( RESRC.NAME, COLOR_PAIR( COLORPAIR ) );                                   \
-    wattrset( RESRC.NAME, COLOR_PAIR( COLORPAIR ) | A_BOLD );                       \
-    wprintw( RESRC.NAME, FORMAT, ##ARGS );                                          \
-    wattrset( RESRC.NAME, A_NORMAL );                                               \
 }
 
 
@@ -122,6 +111,7 @@ typedef enum message {
         MSG_NO_USED = 0,
         MSG_NEED_FOCUS,
         MSG_RELEASE_FOCUS,
+        MSG_XFER_CONTROL,
         MSG_DESTROY_WINDOW,
 } MESSAGE;
 
@@ -153,7 +143,10 @@ typedef struct {
 typedef struct message_info {
         MESSAGE msg;
         int sender_handle;
-        void *data;
+        union {
+                void *p_data;
+                int target_handle;
+        }data;
 }msg_info;
 
 #define WINDOWS_POOL_SIZE  32
@@ -167,12 +160,14 @@ typedef struct windows_manager_info {
         int cur_fore_window_handle;
 } st_windows_manager_info;
 
-
+// API for modules
 int register_windows(st_window_info *p_win);
 int request_windows_focus(st_window_info *p_win, int handle);
 int request_destroy_windows(st_window_info *p_win, int handle);
 WIN_STATE request_window_state(st_window_info *p_win, int handle);
+int request_xfer_control(st_window_info *p_win, int handle, char *func_name);
 int release_windows_focus(st_window_info *p_win, int handle);
+// --------------
 
 #define module_init(info, handle)                                                 \
 static void __attribute__((constructor)) do_lfdk_init_ ## info(void)            \

@@ -14,6 +14,8 @@
  * GNU General Public License for more details.
  *
  */
+#define TAG "BASE"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,6 +31,7 @@
 #include "../lfdd/lfdd.h"
 #include "lfdk.h"
 #include "libbase.h"
+#include "debug.h"
 
 static BasePanel BaseScreen;
 
@@ -49,16 +52,20 @@ void PrintBaseScreen( void ) {
     //
     // Background Color
     //
-    PrintWin( BaseScreen, bg, 23, 80, 0, 0, WHITE_BLUE, "" );
+    PrintFixedWin( BaseScreen, bg, 23, 80, 0, 0, WHITE_BLUE, "" );
 
 
     //
     // Base Screen
     //
-    PrintWin( BaseScreen, logo, 1, 80, 0, 0, WHITE_RED, "Linux Firmware Debug Kit "LFDK_VERSION );
-    PrintWin( BaseScreen, copyright, 1, 32, 0, 48, WHITE_RED, "Merck Hung <merckhung@gmail.com>" );
-    PrintWin( BaseScreen, help, 1, 80, 23, 0, BLACK_WHITE, "(Q)uit (P)CI (M)emory (I)O CM(O)S" );
+    PrintFixedWin( BaseScreen, logo, 1, 80, 0, 0, WHITE_RED, "Linux Firmware Debug Kit "LFDK_VERSION );
+    PrintFixedWin( BaseScreen, copyright, 1, 32, 0, 48, WHITE_RED, "Merck Hung <merckhung@gmail.com>" );
+    PrintFixedWin( BaseScreen, help, 1, 80, 23, 0, BLACK_WHITE, "(Q)uit (P)CI (M)emory (I)O CM(O)S" );
 
+    top_panel(BaseScreen.p_bg);
+    top_panel(BaseScreen.p_logo);
+    top_panel(BaseScreen.p_copyright);
+    top_panel(BaseScreen.p_help);
 
     update_panels();
 }
@@ -77,6 +84,8 @@ static int baseboard_start_win(st_cmd_info *p_cmd, void *data)
 
 static int baseboard_paint(st_cmd_info *p_cmd, void *data)
 {
+        log_v("%s\n", __func__);
+
         PrintBaseScreen();
         return 0;
 }

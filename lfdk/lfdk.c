@@ -36,18 +36,9 @@
 #include "lfdk.h"
 #include "libpci.h"
 
-
-
-
-int x = 0, y = 0;
-int curr_index = 0, last_index;
-int input = 0;
-unsigned int counter = 0;
-int ibuf;
-char wbuf;
+int32_t ibuf;
 int maxpcibus = 255;
 char pciname[ LFDK_MAX_PATH ];
-char enter_mem = 0;
 
 
 st_windows_manager_info win_manager = {
@@ -127,6 +118,43 @@ int request_windows_focus(st_window_info *p_win, int handle)
         return 0;
 }
 
+int request_xfer_control(st_window_info *p_win, int handle, char *func_name)
+{
+        st_win_info *p_win_info = NULL;
+        int i, found;
+
+        if (!p_win || handle < 0) return ERR_INVALID_PARAM;
+        if (handle >= win_manager.windows_used_len) return ERR_INVALID_PARAM;
+
+        p_win_info = &win_manager.windows_pool[handle];
+
+        if (strcmp(p_win_info->p_win->name, p_win->name)) {
+                return ERR_INVALID_PARAM;
+        }
+
+        if (win_manager.msg_used_len >= MSG_SIZE) {
+                return ERR_BUF_OVERFLOW;
+        }
+
+        if (!func_name) {
+                return ERR_INVALID_PARAM;
+        }
+
+        for (i=0,found = -1; i<win_manager.windows_used_len; i++) {
+                if (!strcmp(win_manager.windows_pool[i].p_win->name, func_name)) {
+                        found = i;
+                        break;
+                }
+        }
+
+        win_manager.msg_box[win_manager.msg_used_len].msg = MSG_XFER_CONTROL;
+        win_manager.msg_box[win_manager.msg_used_len].sender_handle = handle;
+        win_manager.msg_box[win_manager.msg_used_len].data.target_handle = found;
+        win_manager.msg_used_len++;
+
+
+}
+
 int request_destroy_windows(st_window_info *p_win, int handle)
 {
         st_win_info *p_win_info = NULL;
@@ -204,13 +232,13 @@ static int switch_key_press(int key)
                 if (p_window->short_key == (uint32_t)key) {
                         request_windows_focus(p_window, i);
                         found = 1;
+                        break;
                 }
-                break;
         }
         return found;
 }
 
-static int handle_key_event(int key)
+static int handle_key_event(uint32_t key)
 {
         int i;
 
@@ -280,10 +308,9 @@ static int handle_message_event()
                 win_manager.msg_used_len--;
                 msg_tmp = win_manager.msg_box[win_manager.msg_used_len];
                 //clear the end unit
-                win_manager.msg_box[win_manager.msg_used_len].msg = MSG_NO_USED;
-                win_manager.msg_box[win_manager.msg_used_len].sender_handle = -1;
-                win_manager.msg_box[win_manager.msg_used_len].data = NULL;
+                memset(&win_manager.msg_box[win_manager.msg_used_len], sizeof(msg_info), 0x00);
                 //handle message
+                log_i("%s, sender: %s\n", msg_name(msg_tmp.msg), win_manager.windows_pool[msg_tmp.sender_handle].p_win->name);
                 switch(msg_tmp.msg) {
                         case MSG_NEED_FOCUS:
                                 if (msg_tmp.sender_handle == win_manager.cur_fore_window_handle) {
@@ -320,6 +347,39 @@ static int handle_message_event()
                                         p_next_wnd->win_state = WM_BACKGROUND;
                                         win_manager.cur_fore_window_handle = -1;
                                 }
+
+                                break;
+
+                        case MSG_XFER_CONTROL:
+                                if (msg_tmp.sender_handle == msg_tmp.data.target_handle) {
+                                        // foreground module no need to switch 
+                                        log_w("xfer warning, sender == target: %s\n", win_manager.windows_pool[msg_tmp.sender_handle].p_win->name);
+                                        continue;
+                                }
+                                if (win_manager.cur_fore_window_handle >= 0) {
+                                        p_cur_wnd = &win_manager.windows_pool[win_manager.cur_fore_window_handle];
+                                }
+
+                                if (p_cur_wnd && msg_tmp.sender_handle != win_manager.cur_fore_window_handle) {
+                                        log_w("xfer warning, sender != foreground: %s, %s\n", 
+                                                win_manager.windows_pool[msg_tmp.sender_handle].p_win->name,
+                                                p_cur_wnd->p_win->name
+                                        );
+                                        continue;
+                                }
+                                p_next_wnd = &win_manager.windows_pool[msg_tmp.data.target_handle];
+                                log_i("xfer to: %s\n", p_next_wnd->p_win->name);
+                                //lost focust event
+                                if (p_cur_wnd) {
+                                        if (p_cur_wnd->p_win->lost_focus) 
+                                                p_cur_wnd->p_win->lost_focus(&win_manager.cmd_info, NULL);
+                                        p_cur_wnd->win_state = WM_BACKGROUND;
+                                }
+                                //got focus event
+                                win_manager.cur_fore_window_handle = msg_tmp.data.target_handle;
+                                p_next_wnd->win_state = WM_FOREGROUND;
+                                if (p_next_wnd->p_win->get_focus)
+                                        p_next_wnd->p_win->get_focus(&win_manager.cmd_info, NULL);
 
                                 break;
 
@@ -524,7 +584,8 @@ int main( int argc, char **argv ) {
                     break;
             }
             if (!switch_key_press(ibuf)) {
-                    handle_key_event(ibuf);
+                    if (ibuf > 0)
+                            handle_key_event(ibuf);
             }
 
             //handle message event

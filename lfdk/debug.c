@@ -13,6 +13,23 @@ extern st_windows_manager_info win_manager;
 
 FILE *debug_fd = NULL;
 
+char *msg_name(MESSAGE MSG)
+{
+        switch(MSG) {
+                case MSG_NEED_FOCUS: 
+                        return "MSG_NEED_FOCUS";
+                case MSG_DESTROY_WINDOW:
+                        return "MSG_DESTROY_WINDOW";
+                case MSG_RELEASE_FOCUS:
+                        return "MSG_RELEASE_FOCUS";
+                case MSG_XFER_CONTROL:
+                        return "MSG_XFER_CONTROL";
+                default:
+                        return "MSG_UNKNOWN";
+        }
+        return NULL;
+}
+
 int debug_init()
 {
         debug_fd = fopen(DEFAULT_LOG_FILE, "wb") ;

@@ -17,7 +17,7 @@ CFLAGS				=
 LDFLAGS				=   -lpanel -lncurses -g3
 OBJS				=   lfdk
 #LIBS				=	libmem.c libpci.c libio.c libcmos.c libbase.c
-LIBS				=	libpci.c libbase.c debug.c
+LIBS				=	lib_pci_dev.c lib_pci_scan.c lib_pci_list.c libbase.c debug.c
 
 
 all:

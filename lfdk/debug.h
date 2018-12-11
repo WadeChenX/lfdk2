@@ -16,6 +16,7 @@ typedef enum debug_level {
 int debug_init();
 int debug_log(int lv, const char *fmt, ...);
 int debug_exit();
+char *msg_name(MESSAGE MSG);
 
 #define _log_c(...) \
         debug_log(DEBUG_CRIT, __VA_ARGS__)
