@@ -62,16 +62,16 @@ static int32_t ioaddr = 0;
 static char offset_text[512] = {0};
 
 
-void WriteIOValue( int fd ) {
-
-
-    lfdd_io_data.addr = ioaddr + x * LFDK_BYTE_PER_LINE + y;
-    lfdd_io_data.buf = wbuf;
-    if (display_mode == BYTE_MODE) {
-            LFDD_IOCTL( fd, LFDD_IO_WRITE_BYTE, lfdd_io_data );
-    }else {
-            LFDD_IOCTL( fd, LFDD_IO_WRITE_WORD, lfdd_io_data );
-    }
+void WriteIOValue( int fd ) 
+{
+        //TODO: need to verify this function
+        lfdd_io_data.addr = ioaddr + x * LFDK_BYTE_PER_LINE + y;
+        lfdd_io_data.buf = wbuf;
+        if (display_mode == BYTE_MODE) {
+                LFDD_IOCTL( fd, LFDD_IO_WRITE_BYTE, lfdd_io_data );
+        }else {
+                LFDD_IOCTL( fd, LFDD_IO_WRITE_WORD, lfdd_io_data );
+        }
 }
 
 
@@ -85,16 +85,20 @@ void ClearIOScreen() {
 
 static char *CreateOffsetText()
 {
+        int ioaddr_x_y = 0;
+        ioaddr_x_y = ioaddr + y * LFDK_BYTE_PER_LINE + x;
         if (display_mode == BYTE_MODE) {
                 sprintf(offset_text,
-                  "0000 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n"
-                  "0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0" 
-                  );
+                  "%4.4X 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n"
+                  "0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0",
+                  ioaddr_x_y
+                );
         } else  {
                 sprintf(offset_text,
-                  "0000 0000  0002  0004  0006  0008  000A  000C  000E\n"
-                  "0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0" 
-                  );
+                  "%4.4X 0000  0002  0004  0006  0008  000A  000C  000E\n"
+                  "0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0", 
+                  ioaddr_x_y
+                );
         } 
         return offset_text;
 }
@@ -134,7 +138,9 @@ void PrintIOScreen( int fd )
 
         if(input == INPUT_ADDR) {
                 wattrset( IOScreen.info, COLOR_PAIR( YELLOW_RED ) | A_BOLD );
-                wprintw( IOScreen.info, "%4.4X", wbuf);
+                wprintw( IOScreen.info, "%2.2X", wbuf);
+                wattrset( IOScreen.info, COLOR_PAIR( WHITE_BLUE ) | A_BOLD );
+                wprintw( IOScreen.info, "00" );
         } else {
                 wattrset( IOScreen.info, COLOR_PAIR( WHITE_BLUE ) | A_BOLD );
                 wprintw( IOScreen.info, "%4.4X", ioaddr );
@@ -256,7 +262,7 @@ static int io_key_press(st_cmd_info *p_cmd, void *data)
                 switch(*p_key_code){
                         case 0x0a: //enter
                                 input = NO_INPUT;
-                                ioaddr = wbuf;
+                                ioaddr = (wbuf<<8);
                                 wbuf = 0;
                                 break;
 
@@ -267,7 +273,7 @@ static int io_key_press(st_cmd_info *p_cmd, void *data)
                         default:
                                 if (isxdigit(*p_key_code)){
                                         wbuf <<= 4;
-                                        wbuf &= 0x0fff0;
+                                        wbuf &= 0x0f0;
                                         if( *p_key_code <= '9' ) {
                                                 wbuf |= *p_key_code - 0x30;
                                         } else if( *p_key_code > 'F' ) {

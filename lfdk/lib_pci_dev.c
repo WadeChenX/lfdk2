@@ -225,9 +225,9 @@ void PrintPCIScreen( int fd ) {
         } // for i
 }
 
-void WritePCIByteValue(int fd) {
-
-
+void WritePCIByteValue(int fd) 
+{
+        //TODO: need to write data according display mode
         lfdd_pci_data.bus = lfdd_pci_list[ curr_index ].bus;
         lfdd_pci_data.dev = lfdd_pci_list[ curr_index ].dev;
         lfdd_pci_data.fun = lfdd_pci_list[ curr_index ].fun;
