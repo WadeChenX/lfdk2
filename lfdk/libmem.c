@@ -14,6 +14,9 @@
  * GNU General Public License for more details.
  *
  */
+
+#define TAG MEM
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
