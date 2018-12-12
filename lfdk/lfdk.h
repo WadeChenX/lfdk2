@@ -39,6 +39,7 @@ typedef enum error {
 #define LFDK_MAX_PATH           40
 #define LFDK_MAX_READBUF        512
 #define LFDK_BYTES_PER_PAGE     256 
+#define LFDK_BYTE_PER_LINE	16
 
 #define LFDD_IOCTL( FDESC, IOCTL_CMD, DATA ) {              \
                                                             \

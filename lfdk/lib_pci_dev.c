@@ -34,8 +34,6 @@
 #include "libpci.h"
 #include "debug.h"
 
-#define LFDK_BYTE_PER_LINE		16
-
 typedef enum DISPLAY_MODE {
         BYTE_MODE = 0,
         WORD_MODE,

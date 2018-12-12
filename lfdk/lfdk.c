@@ -255,15 +255,21 @@ static int handle_key_event(uint32_t key)
 static int handle_init_event()
 {
         int i;
+        int ret = 0;
 
         log_i("%s\n", __func__);
 
         for (i=0; i<win_manager.windows_used_len; i++) {
-                if (win_manager.windows_pool[i].p_win->init)
-                        win_manager.windows_pool[i].p_win->init(&win_manager.cmd_info, NULL);
+                if (win_manager.windows_pool[i].p_win->init) {
+                        ret = win_manager.windows_pool[i].p_win->init(&win_manager.cmd_info, NULL);
+                        if (ret) {
+                                log_c("%s, %s fail\n", __func__, win_manager.windows_pool[i].p_win->name);
+                                break;
+                        };
+                }
                 win_manager.windows_pool[i].win_state = WM_INITED;
         }
-        return 0;
+        return ret;
 }
 
 static int handle_start_win_event()
@@ -531,17 +537,12 @@ int main( int argc, char **argv ) {
     win_manager.cmd_info.fd_lfdd = fd;
 
 
-	//
-    // Enable IO Permission
-	//
-    //if( ioperm( LFDK_CMOS_IO_START, LFDK_CMOS_IO_END, 1 ) ) {
 
-    //    fprintf( stderr, "Failed to Execute ioperm()\n" );
-    //    ret = ERR_REQ_IO;
-    //    goto err_request_io;
-    //}
-
-    handle_init_event();
+    ret = handle_init_event();
+    if (ret) {
+            fprintf( stderr, "Error occur in init event\n");
+            goto err_init_ev;
+    }
 
 
     //
@@ -561,14 +562,17 @@ int main( int argc, char **argv ) {
     //
     InitColorPairs();
 
-    handle_start_win_event();
+    ret = handle_start_win_event();
+    if (ret) {
+            fprintf( stderr, "Error occur in start-window event\n");
+            goto err_out;
+    }
 
-    handle_post_start_win_event();
-
-    //
-    // Prepare Base Screen
-    //
-    //PrintBaseScreen();
+    ret = handle_post_start_win_event();
+    if (ret) {
+            fprintf( stderr, "Error occur in post-start-window event\n");
+            goto err_out;
+    }
 
     doupdate();
 
@@ -608,7 +612,7 @@ int main( int argc, char **argv ) {
 
 err_out:
     endwin();
-//err_request_io:
+err_init_ev:
     close( fd );
 err_open_dev:
     debug_exit();
