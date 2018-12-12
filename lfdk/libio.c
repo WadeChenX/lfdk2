@@ -65,7 +65,7 @@ static char offset_text[512] = {0};
 void WriteIOValue( int fd ) 
 {
         //TODO: need to verify this function
-        lfdd_io_data.addr = ioaddr + x * LFDK_BYTE_PER_LINE + y;
+        lfdd_io_data.addr = ioaddr + y * LFDK_BYTE_PER_LINE + x;
         lfdd_io_data.buf = wbuf;
         if (display_mode == BYTE_MODE) {
                 LFDD_IOCTL( fd, LFDD_IO_WRITE_BYTE, lfdd_io_data );
