@@ -281,6 +281,10 @@ static int io_key_press(st_cmd_info *p_cmd, void *data)
                                         } else {
                                                 wbuf |= *p_key_code - 0x40 + 9;
                                         }
+                                } else {
+                                        // out input mode
+                                        wbuf = 0;
+                                        input = NO_INPUT;
                                 }
                                 break;
                 } //switch
