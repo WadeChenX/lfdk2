@@ -1,4 +1,3 @@
-
 #ifndef __LIBPCI_H__
 #define __LIBPCI_H__
 
@@ -6,7 +5,6 @@
 #define LFDK_MAX_PCIBUS			256
 #define LFDK_DEFAULT_PCINAME    "/usr/share/misc/pci.ids"
 #define LFDK_MAX_PCINAME        75
-#define LFDK_BYTE_PER_LINE		16
 
 typedef struct {
 
