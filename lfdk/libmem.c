@@ -15,7 +15,7 @@
  *
  */
 
-#define TAG MEM
+#define TAG "MEM"
 
 #include <stdio.h>
 #include <stdlib.h>

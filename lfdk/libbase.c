@@ -24,6 +24,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include <time.h>
 
 #include <ncurses.h>
 #include <panel.h>
@@ -35,39 +36,43 @@
 
 static BasePanel BaseScreen;
 
-
-/*
-        int (*start_win)(st_cmd_info *p_cmd, void *data);
-        int (*lost_focus)(st_cmd_info *p_cmd, void *data);
-        int (*get_focus)(st_cmd_info *p_cmd, void *data);
-        int (*paint)(st_cmd_info *p_cmd, void *data);
-        int (*key_press)(st_cmd_info *p_cmd, void *data);
-        int (*destroy_win)(st_cmd_info *p_cmd, void *data);
-        int (*exit)(st_cmd_info *p_cmd, void *data);
-        */
-
-void PrintBaseScreen( void ) {
+void PrintBaseScreen( void ) 
+{
+        struct tm *nowtime;
+        time_t timer;
+        int last_sec;
 
 
-    //
-    // Background Color
-    //
-    PrintFixedWin( BaseScreen, bg, 23, 80, 0, 0, WHITE_BLUE, "" );
+        //
+        // Background Color
+        //
+        PrintFixedWin( BaseScreen, bg, 23, 80, 0, 0, WHITE_BLUE, "" );
 
 
-    //
-    // Base Screen
-    //
-    PrintFixedWin( BaseScreen, logo, 1, 80, 0, 0, WHITE_RED, "Linux Firmware Debug Kit "LFDK_VERSION );
-    PrintFixedWin( BaseScreen, copyright, 1, 32, 0, 48, WHITE_RED, "Merck Hung <merckhung@gmail.com>" );
-    PrintFixedWin( BaseScreen, help, 1, 80, 23, 0, BLACK_WHITE, "(Q)uit (P)CI (M)emory (I)O CM(O)S" );
+        //
+        // Base Screen
+        //
+        PrintFixedWin( BaseScreen, logo, 1, 80, 0, 0, WHITE_RED, "Linux Firmware Debug Kit "LFDK_VERSION );
+        PrintFixedWin( BaseScreen, help, 1, 80, 23, 0, BLACK_WHITE, "(Q)uit (P)CI (M)emory (I)O CM(O)S" );
 
-    top_panel(BaseScreen.p_bg);
-    top_panel(BaseScreen.p_logo);
-    top_panel(BaseScreen.p_copyright);
-    top_panel(BaseScreen.p_help);
+        // Update timer
+        //
+        time( &timer );
+        nowtime = localtime( &timer );
 
-    update_panels();
+        // Skip redundant update of timer
+        if( last_sec != nowtime->tm_sec ) {
+                last_sec = nowtime->tm_sec;
+                PrintFixedWin( BaseScreen, time, 1, 8, 0, 71, WHITE_RED, "%2.2d:%2.2d:%2.2d", 
+                        nowtime->tm_hour, nowtime->tm_min,  nowtime->tm_sec );
+        }
+
+        top_panel(BaseScreen.p_bg);
+        top_panel(BaseScreen.p_logo);
+        top_panel(BaseScreen.p_help);
+        top_panel(BaseScreen.p_time);
+
+        update_panels();
 }
 
 int base_handle = -1;
