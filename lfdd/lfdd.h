@@ -43,7 +43,7 @@ enum {
 	LFDD_PCIE_WRITE_WORD,
 	LFDD_PCIE_WRITE_DWORD,
 	LFDD_PCIE_READ_256BYTE,
-		
+
 	LFDD_MEM_READ_BYTE,
 	LFDD_MEM_READ_WORD,
 	LFDD_MEM_READ_DWORD,
@@ -69,54 +69,46 @@ enum {
 
 
 struct lfdd_pci_t {
+        uint8_t   bus;
+        uint8_t   dev;
+        uint8_t   fun;
+        uint8_t   reg;
 
-    unsigned char   bus;
-    unsigned char   dev;
-    unsigned char   fun;
-    unsigned char   reg;
-
-    unsigned int    buf;
-    unsigned char   mass_buf[ LFDD_MASSBUF_SIZE ];
+        uint32_t  buf;
+        uint8_t   mass_buf[ LFDD_MASSBUF_SIZE ];
 };
 
 
 struct lfdd_pcie_t {
+        uint8_t   bus;
+        uint8_t   dev;
+        uint8_t   fun;
+        uint8_t   reg;
 
-    unsigned char   bus;
-    unsigned char   dev;
-    unsigned char   fun;
-    unsigned char   reg;
-
-    unsigned int    buf;
-    unsigned char   mass_buf[ LFDD_MASSBUF_SIZE ];
+        uint32_t  buf;
+        uint8_t   mass_buf[ LFDD_MASSBUF_SIZE ];
 };
 
 
 struct lfdd_mem_t {
-
-    unsigned int    addr;
-
-    unsigned int    buf;
-    unsigned char   mass_buf[ LFDD_MASSBUF_SIZE ];
+        uint32_t    addr;
+        uint32_t    buf;
+        uint8_t     mass_buf[ LFDD_MASSBUF_SIZE ];
 };
 
 
 struct lfdd_io_t {
-
-    unsigned int    addr;
-
-    unsigned int    buf;
-    unsigned char   mass_buf[ LFDD_MASSBUF_SIZE ];
+        uint32_t    addr;
+        uint32_t    buf;
+        uint8_t     mass_buf[ LFDD_MASSBUF_SIZE ];
 };
 
 
 struct lfdd_i2c_t {
-
-	unsigned char	addr;
-	unsigned char	off;
-
-	unsigned char	buf;
-	unsigned char	mass_buf[ LFDD_MASSBUF_SIZE ];
+        uint8_t	addr;
+        uint8_t	off;
+        uint8_t	buf;
+        uint8_t	mass_buf[ LFDD_MASSBUF_SIZE ];
 };
 
 
@@ -128,29 +120,29 @@ struct lfdd_i2c_t {
 
 
 #ifdef __KERNEL__
-unsigned char lfdd_io_read_byte( unsigned int addr );
-void lfdd_io_write_byte( unsigned char value, unsigned int addr );
-unsigned short lfdd_io_read_word( unsigned int addr );
-void lfdd_io_write_word( unsigned short value, unsigned int addr );
-unsigned int lfdd_io_read_dword( unsigned int addr );
-void lfdd_io_write_dword( unsigned int value, unsigned int addr );
+uint8_t lfdd_io_read_byte( uint32_t addr );
+void lfdd_io_write_byte( uint8_t value, uint32_t addr );
+uint16_t lfdd_io_read_word( uint32_t addr );
+void lfdd_io_write_word( unsigned short value, uint32_t addr );
+uint32_t lfdd_io_read_dword( uint32_t addr );
+void lfdd_io_write_dword( uint32_t value, uint32_t addr );
 void lfdd_io_read_256byte( struct lfdd_io_t *pio );
 
-unsigned char lfdd_mem_read_byte( unsigned int addr );
-unsigned short int lfdd_mem_read_word( unsigned int addr );
-unsigned int lfdd_mem_read_dword( unsigned int addr );
-void lfdd_mem_write_byte( unsigned int value, unsigned int addr );
-void lfdd_mem_write_word( unsigned int value, unsigned int addr );
-void lfdd_mem_write_dword( unsigned int value, unsigned int addr );
+uint8_t lfdd_mem_read_byte( uint32_t addr );
+uint16_t lfdd_mem_read_word( uint32_t addr );
+uint32_t lfdd_mem_read_dword( uint32_t addr );
+void lfdd_mem_write_byte( uint32_t value, uint32_t addr );
+void lfdd_mem_write_word( uint32_t value, uint32_t addr );
+void lfdd_mem_write_dword( uint32_t value, uint32_t addr );
 void lfdd_mem_read_256byte( struct lfdd_mem_t *pmem );
 
-unsigned int lfdd_cal_pci_addr( unsigned char bus, unsigned char dev, unsigned char fun, unsigned char reg );
-unsigned char lfdd_pci_read_byte( unsigned int addr );
-unsigned short int lfdd_pci_read_word( unsigned int addr );
-unsigned int lfdd_pci_read_dword( unsigned int addr );
-void lfdd_pci_write_byte( unsigned int value, unsigned int addr );
-void lfdd_pci_write_word( unsigned int value, unsigned int addr );
-void lfdd_pci_write_dword( unsigned int value, unsigned int addr );
+uint32_t lfdd_cal_pci_addr( uint8_t bus, uint8_t dev, uint8_t fun, uint8_t reg );
+uint8_t lfdd_pci_read_byte( uint32_t addr );
+uint16_t lfdd_pci_read_word( uint32_t addr );
+uint32_t lfdd_pci_read_dword( uint32_t addr );
+void lfdd_pci_write_byte( uint32_t value, uint32_t addr );
+void lfdd_pci_write_word( uint32_t value, uint32_t addr );
+void lfdd_pci_write_dword( uint32_t value, uint32_t addr );
 void lfdd_pci_read_256byte( struct lfdd_pci_t *ppci );
 #endif
 
