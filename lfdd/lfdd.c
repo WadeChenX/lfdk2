@@ -93,189 +93,195 @@
 spinlock_t lfdd_lock;
 
 
-static int lfdd_open( struct inode *inode, struct file *file ) {
-    
-    return 0;
+static int lfdd_open( struct inode *inode, struct file *file ) 
+{
+        return 0;
 }
 
 
-static int lfdd_release( struct inode *inode, struct file *file ) {
-
-    return 0;
+static int lfdd_release( struct inode *inode, struct file *file ) 
+{
+        return 0;
 }
 
+char cmd_str_table[][64] = {
+	"PCI_READ_BYTE",
+	"PCI_READ_WORD",
+	"PCI_READ_DWORD",
+	"PCI_WRITE_BYTE",
+	"PCI_WRITE_WORD",
+	"PCI_WRITE_DWORD",
+	"PCI_READ_256BYTE",
+	"PCIE_READ_BYTE",
+	"PCIE_READ_WORD",
+	"PCIE_READ_DWORD",
+	"PCIE_WRITE_BYTE",
+	"PCIE_WRITE_WORD",
+	"PCIE_WRITE_DWORD",
+	"PCIE_READ_256BYTE",
+	"MEM_READ_BYTE",
+	"MEM_READ_WORD",
+	"MEM_READ_DWORD",
+	"MEM_WRITE_BYTE",
+	"MEM_WRITE_WORD",
+	"MEM_WRITE_DWORD",
+	"MEM_READ_256BYTE",
+	"IO_READ_BYTE",
+	"IO_READ_WORD",
+	"IO_READ_DWORD",
+	"IO_WRITE_BYTE",
+	"IO_WRITE_WORD",
+	"IO_WRITE_DWORD",
+	"IO_READ_256BYTE",
+        NULL
+};
 
-static long lfdd_ioctl( struct file *file
-                            , unsigned int cmd, unsigned long arg ) {
+static long lfdd_ioctl( struct file *file, unsigned int cmd, unsigned long arg ) 
+{
+        struct lfdd_pci_t lfdd_pci_data;
+        struct lfdd_mem_t lfdd_mem_data;
+        struct lfdd_io_t lfdd_io_data;
+        void __user *argp = (void __user *)arg;
 
-    struct lfdd_pci_t lfdd_pci_data;
-    struct lfdd_mem_t lfdd_mem_data;
-    struct lfdd_io_t lfdd_io_data;
-    void __user *argp = (void __user *)arg;
+        if (cmd < LFDD_IOCTL_CMD_MAX &&
+                cmd != LFDD_PCI_READ_256BYTE &&
+                cmd != LFDD_MEM_READ_256BYTE &&
+                cmd != LFDD_IO_READ_256BYTE) { 
+                pr_info("%s\n", cmd_str_table[cmd]);
+        }
 
-	printk( KERN_INFO "C1\n" );
+        switch( cmd ) {
+                //
+                // PCI Functions
+                //
+                case LFDD_PCI_READ_256BYTE:
+                        if( copy_from_user( &lfdd_pci_data, argp, sizeof( struct lfdd_pci_t ) ) ) {
+                                pr_info("Copy pci cmd fail\n");
+                                return -EFAULT;
+                        }
 
-    switch( cmd ) {
+                        memset( lfdd_pci_data.mass_buf, 0, LFDD_MASSBUF_SIZE );
+                        lfdd_pci_read_256byte( &lfdd_pci_data );
 
-    
-        //
-        // PCI Functions
-        //
-        case LFDD_PCI_READ_256BYTE:
+                        return copy_to_user( argp, &lfdd_pci_data, sizeof( struct lfdd_pci_t ) );
 
-			printk( KERN_INFO "C3\n" );
-            if( copy_from_user( &lfdd_pci_data, argp, sizeof( struct lfdd_pci_t ) ) ) {
+                case LFDD_PCI_READ_BYTE:
+                        LFDD_PCI_READ( lfdd_pci_read_byte, lfdd_pci_data );
 
-				printk( KERN_INFO "C2\n" );
-                return -EFAULT;
-            }
+                case LFDD_PCI_READ_WORD:
+                        LFDD_PCI_READ( lfdd_pci_read_word, lfdd_pci_data );
 
-            memset( lfdd_pci_data.mass_buf, 0, LFDD_MASSBUF_SIZE );
-            lfdd_pci_read_256byte( &lfdd_pci_data );
+                case LFDD_PCI_READ_DWORD:
+                        LFDD_PCI_READ( lfdd_pci_read_dword, lfdd_pci_data );
 
-            return copy_to_user( argp, &lfdd_pci_data, sizeof( struct lfdd_pci_t ) );
+                case LFDD_PCI_WRITE_BYTE:
+                        LFDD_PCI_WRITE( lfdd_pci_write_byte, lfdd_pci_data );
 
-        case LFDD_PCI_READ_BYTE:
-			printk( KERN_INFO "C4\n" );
-            LFDD_PCI_READ( lfdd_pci_read_byte, lfdd_pci_data );
+                case LFDD_PCI_WRITE_WORD:
+                        LFDD_PCI_WRITE( lfdd_pci_write_word, lfdd_pci_data );
 
-        case LFDD_PCI_READ_WORD:
-			printk( KERN_INFO "C5\n" );
-            LFDD_PCI_READ( lfdd_pci_read_word, lfdd_pci_data );
+                case LFDD_PCI_WRITE_DWORD:
+                        LFDD_PCI_WRITE( lfdd_pci_write_dword, lfdd_pci_data );
 
-        case LFDD_PCI_READ_DWORD:
-			printk( KERN_INFO "C6\n" );
-            LFDD_PCI_READ( lfdd_pci_read_dword, lfdd_pci_data );
+                case LFDD_MEM_READ_256BYTE:
+                        if( copy_from_user( &lfdd_mem_data, argp, sizeof( struct lfdd_mem_t ) ) ) {
+                                pr_info("Copy mem cmd fail\n");
+                                return -EFAULT;
+                        }
 
-        case LFDD_PCI_WRITE_BYTE:
-			printk( KERN_INFO "C7\n" );
-            LFDD_PCI_WRITE( lfdd_pci_write_byte, lfdd_pci_data );
+                        memset( lfdd_mem_data.mass_buf, 0, LFDD_MASSBUF_SIZE );
+                        lfdd_mem_read_256byte( &lfdd_mem_data );
 
-        case LFDD_PCI_WRITE_WORD:
-			printk( KERN_INFO "C8\n" );
-            LFDD_PCI_WRITE( lfdd_pci_write_word, lfdd_pci_data );
+                        return copy_to_user( argp, &lfdd_mem_data, sizeof( struct lfdd_mem_t ) );
 
-        case LFDD_PCI_WRITE_DWORD:
-			printk( KERN_INFO "C9\n" );
-            LFDD_PCI_WRITE( lfdd_pci_write_dword, lfdd_pci_data );        
+                case LFDD_MEM_READ_BYTE:
+                        LFDD_MEM_READ( lfdd_mem_read_byte, lfdd_mem_data );
 
+                case LFDD_MEM_READ_WORD:
+                        LFDD_MEM_READ( lfdd_mem_read_word, lfdd_mem_data );
 
-        //
-        // Memory Functions
-        //
-        case LFDD_MEM_READ_256BYTE:
+                case LFDD_MEM_READ_DWORD:
+                        LFDD_MEM_READ( lfdd_mem_read_dword, lfdd_mem_data );
 
-			printk( KERN_INFO "C10\n" );
-            if( copy_from_user( &lfdd_mem_data, argp, sizeof( struct lfdd_mem_t ) ) ) {
+                case LFDD_MEM_WRITE_BYTE:
+                        LFDD_MEM_WRITE( lfdd_mem_write_byte, lfdd_mem_data );
 
-				printk( KERN_INFO "C11\n" );
-                return -EFAULT;
-            }
+                case LFDD_MEM_WRITE_WORD:
+                        LFDD_MEM_WRITE( lfdd_mem_write_word, lfdd_mem_data );
 
-            memset( lfdd_mem_data.mass_buf, 0, LFDD_MASSBUF_SIZE );
-            lfdd_mem_read_256byte( &lfdd_mem_data );
+                case LFDD_MEM_WRITE_DWORD:
+                        LFDD_MEM_WRITE( lfdd_mem_write_dword, lfdd_mem_data );        
 
-			printk( KERN_INFO "C12\n" );
-            return copy_to_user( argp, &lfdd_mem_data, sizeof( struct lfdd_mem_t ) );
+                case LFDD_IO_READ_256BYTE:
+                        if( copy_from_user( &lfdd_io_data, argp, sizeof( struct lfdd_io_t ) ) ) {
+                                pr_info("Copy io cmd fail\n");
+                                return -EFAULT;
+                        }
 
-        case LFDD_MEM_READ_BYTE:
-			printk( KERN_INFO "C13\n" );
-            LFDD_MEM_READ( lfdd_mem_read_byte, lfdd_mem_data );
+                        memset( lfdd_io_data.mass_buf, 0, LFDD_MASSBUF_SIZE );
+                        lfdd_io_read_256byte( &lfdd_io_data );
 
-        case LFDD_MEM_READ_WORD:
-			printk( KERN_INFO "C14\n" );
-            LFDD_MEM_READ( lfdd_mem_read_word, lfdd_mem_data );
+                        return copy_to_user( argp, &lfdd_io_data, sizeof( struct lfdd_io_t ) );
 
-        case LFDD_MEM_READ_DWORD:
-            LFDD_MEM_READ( lfdd_mem_read_dword, lfdd_mem_data );
+                case LFDD_IO_WRITE_BYTE:
+                        LFDD_MEM_WRITE( lfdd_io_write_byte, lfdd_io_data );
 
-        case LFDD_MEM_WRITE_BYTE:
-            LFDD_MEM_WRITE( lfdd_mem_write_byte, lfdd_mem_data );
+                case LFDD_IO_READ_BYTE:
+                        LFDD_MEM_READ( lfdd_io_read_byte, lfdd_io_data );
 
-        case LFDD_MEM_WRITE_WORD:
-            LFDD_MEM_WRITE( lfdd_mem_write_word, lfdd_mem_data );
+        }
 
-        case LFDD_MEM_WRITE_DWORD:
-            LFDD_MEM_WRITE( lfdd_mem_write_dword, lfdd_mem_data );        
-
-
-        //
-        // IO Functions
-        //
-        case LFDD_IO_READ_256BYTE:
-
-			printk( KERN_INFO "C15\n" );
-            if( copy_from_user( &lfdd_io_data, argp, sizeof( struct lfdd_io_t ) ) ) {
-
-				printk( KERN_INFO "C16\n" );
-                return -EFAULT;
-            }
-
-            memset( lfdd_io_data.mass_buf, 0, LFDD_MASSBUF_SIZE );
-            lfdd_io_read_256byte( &lfdd_io_data );
-
-            return copy_to_user( argp, &lfdd_io_data, sizeof( struct lfdd_io_t ) );
-
-        case LFDD_IO_WRITE_BYTE:
-            LFDD_MEM_WRITE( lfdd_io_write_byte, lfdd_io_data );
-
-        case LFDD_IO_READ_BYTE:
-            LFDD_MEM_READ( lfdd_io_read_byte, lfdd_io_data );
-
-    }
-
-	printk( KERN_INFO "C17\n" );
-    return -EINVAL;
+        return -EINVAL;
 }
 
 
 static struct file_operations lfdd_fops = {
 
-    .owner      =   THIS_MODULE,
-	.unlocked_ioctl = lfdd_ioctl,
-    .compat_ioctl =   lfdd_ioctl,
-    .open       =   lfdd_open,
-    .release    =   lfdd_release,
+        .owner      =   THIS_MODULE,
+        .unlocked_ioctl = lfdd_ioctl,
+        .compat_ioctl =   lfdd_ioctl,
+        .open       =   lfdd_open,
+        .release    =   lfdd_release,
 };
 
 
 static struct miscdevice lfdd_dev = {
 
-    .minor      =   100,
-    .name       =   "lfdd",
-    .fops       =   &lfdd_fops,
+        .minor      =   100,
+        .name       =   "lfdd",
+        .fops       =   &lfdd_fops,
 };
 
 
-static int __init lfdd_init( void ) {
-
-    int ret;
-
-
-    printk( KERN_INFO "lfdd: Linux Firmware Debug Driver Version %s\n", LFDD_VERSION );
+static int __init lfdd_init( void ) 
+{
+        int ret;
 
 
-	// Register character device
-    ret = misc_register( &lfdd_dev );
-    if( ret < 0 ) {
-
-        DBGPRINT( "register lfdd driver failed.\n" );
-        return ret;
-    }
+        printk( KERN_INFO "lfdd: Linux Firmware Debug Driver Version %s\n", LFDD_VERSION );
 
 
-	// Initialize spin lock
-	spin_lock_init( &lfdd_lock );
+        // Register character device
+        ret = misc_register( &lfdd_dev );
+        if( ret < 0 ) {
+
+                DBGPRINT( "register lfdd driver failed.\n" );
+                return ret;
+        }
 
 
-    return 0;
+        // Initialize spin lock
+        spin_lock_init( &lfdd_lock );
+
+
+        return 0;
 }
 
 
-static void __exit lfdd_exit( void ) {
-
-    misc_deregister( &lfdd_dev );
-    printk( KERN_INFO "lfdd: driver unloaded.\n" );
+static void __exit lfdd_exit( void ) 
+{
+        misc_deregister( &lfdd_dev );
+        printk( KERN_INFO "lfdd: driver unloaded.\n" );
 }
 
 

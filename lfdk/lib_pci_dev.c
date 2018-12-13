@@ -232,7 +232,13 @@ void WritePCIByteValue(int fd)
         lfdd_pci_data.reg = y * LFDK_BYTE_PER_LINE + x;
         lfdd_pci_data.buf = wbuf;
 
-        LFDD_IOCTL( fd, LFDD_PCI_WRITE_BYTE, lfdd_pci_data );
+        if (display_mode == BYTE_MODE) {
+                LFDD_IOCTL( fd, LFDD_PCI_WRITE_BYTE, lfdd_pci_data );
+        } else if (display_mode == WORD_MODE) {
+                LFDD_IOCTL( fd, LFDD_PCI_WRITE_WORD, lfdd_pci_data );
+        } else {
+                LFDD_IOCTL( fd, LFDD_PCI_WRITE_DWORD, lfdd_pci_data );
+        }
 }
 
 

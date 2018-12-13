@@ -38,9 +38,9 @@
 extern spinlock_t lfdd_lock;
 
 
-unsigned int lfdd_cal_pci_addr( unsigned char bus, unsigned char dev, unsigned char fun, unsigned char reg ) {
+uint32_t lfdd_cal_pci_addr( uint8_t bus, uint8_t dev, uint8_t fun, uint8_t reg ) {
 
-    unsigned int addr = 0;
+    uint32_t addr = 0;
 
     addr |= (bus & 0xff);
 
@@ -59,11 +59,11 @@ unsigned int lfdd_cal_pci_addr( unsigned char bus, unsigned char dev, unsigned c
 }
 
 
-unsigned char lfdd_pci_read_byte( unsigned int addr ) {
+uint8_t lfdd_pci_read_byte( uint32_t addr ) {
 
     unsigned long flags;
-    unsigned int orig_idx;
-    unsigned int value;
+    uint32_t orig_idx;
+    uint32_t value;
 
     spin_lock_irqsave( &lfdd_lock, flags );
 
@@ -87,11 +87,11 @@ unsigned char lfdd_pci_read_byte( unsigned int addr ) {
 }
 
 
-unsigned short int lfdd_pci_read_word( unsigned int addr ) {
+uint16_t lfdd_pci_read_word( uint32_t addr ) {
 
     unsigned long flags;
-    unsigned int orig_idx;
-    unsigned int value;
+    uint32_t orig_idx;
+    uint32_t value;
 
     spin_lock_irqsave( &lfdd_lock, flags );
 
@@ -115,11 +115,11 @@ unsigned short int lfdd_pci_read_word( unsigned int addr ) {
 }
 
 
-unsigned int lfdd_pci_read_dword( unsigned int addr ) {
+uint32_t lfdd_pci_read_dword( uint32_t addr ) {
 
     unsigned long flags;
-    unsigned int orig_idx;
-    unsigned int value;
+    uint32_t orig_idx;
+    uint32_t value;
 
     spin_lock_irqsave( &lfdd_lock, flags );
 
@@ -141,11 +141,11 @@ unsigned int lfdd_pci_read_dword( unsigned int addr ) {
 }
 
 
-void lfdd_pci_write_byte( unsigned int value, unsigned int addr ) {
+void lfdd_pci_write_byte( uint32_t value, uint32_t addr ) {
 
     unsigned long flags;
-    unsigned int orig_idx;
-    unsigned int temp;
+    uint32_t orig_idx;
+    uint32_t temp;
 
     spin_lock_irqsave( &lfdd_lock, flags );
 
@@ -156,6 +156,7 @@ void lfdd_pci_write_byte( unsigned int value, unsigned int addr ) {
     outl( addr & 0xfffffffc, LFDD_PCI_ADDR_PORT );
 
     temp = inl( LFDD_PCI_DATA_PORT );
+    pr_info("pci_wb: orig 0x%08X\n", temp);
 
     value = (value & 0xff) << ((addr & 0x03) * 8);
     temp &= ~(0x000000ff << ((addr & 0x03) * 8));
@@ -168,14 +169,15 @@ void lfdd_pci_write_byte( unsigned int value, unsigned int addr ) {
     outl( orig_idx, LFDD_PCI_ADDR_PORT );
 
     spin_unlock_irqrestore( &lfdd_lock, flags );
+    pr_info("pci_wb: 0x%08X\n", temp);
 }
 
 
-void lfdd_pci_write_word( unsigned int value, unsigned int addr ) {
+void lfdd_pci_write_word( uint32_t value, uint32_t addr ) {
 
     unsigned long flags;
-    unsigned int orig_idx;
-    unsigned int temp;
+    uint32_t orig_idx;
+    uint32_t temp;
 
     spin_lock_irqsave( &lfdd_lock, flags );
 
@@ -186,9 +188,10 @@ void lfdd_pci_write_word( unsigned int value, unsigned int addr ) {
     outl( addr & 0xfffffffc, LFDD_PCI_ADDR_PORT );
 
     temp = inl( LFDD_PCI_DATA_PORT );
+    pr_info("pci_ww: orig 0x%08X\n", temp);
 
-    value = (value & 0xffff) << ((addr & 0x02) * 16);
-    temp &= ~(0x0000ffff << ((addr & 0x02) * 16));
+    value = (value & 0xffff) << ((addr & 0x02) * 8);
+    temp &= ~(0x0000ffff << ((addr & 0x02) * 8));
     temp |= value;
 
     // Write new Value
@@ -198,13 +201,14 @@ void lfdd_pci_write_word( unsigned int value, unsigned int addr ) {
     outl( orig_idx, LFDD_PCI_ADDR_PORT );
 
     spin_unlock_irqrestore( &lfdd_lock, flags );
+    pr_info("pci_ww: 0x%08X\n", temp);
 }
 
 
-void lfdd_pci_write_dword( unsigned int value, unsigned int addr ) {
+void lfdd_pci_write_dword( uint32_t value, uint32_t addr ) {
 
     unsigned long flags;
-    unsigned int orig_idx;
+    uint32_t orig_idx;
 
     spin_lock_irqsave( &lfdd_lock, flags );
 
@@ -227,9 +231,9 @@ void lfdd_pci_write_dword( unsigned int value, unsigned int addr ) {
 void lfdd_pci_read_256byte( struct lfdd_pci_t *ppci ) { 
 
     unsigned long flags;
-    unsigned int orig_idx;
+    uint32_t orig_idx;
     int i, value;
-    unsigned int addr = lfdd_cal_pci_addr( ppci->bus, ppci->dev, ppci->fun, ppci->reg );
+    uint32_t addr = lfdd_cal_pci_addr( ppci->bus, ppci->dev, ppci->fun, ppci->reg );
 
     spin_lock_irqsave( &lfdd_lock, flags );
 
@@ -242,10 +246,10 @@ void lfdd_pci_read_256byte( struct lfdd_pci_t *ppci ) {
         outl( addr + i, LFDD_PCI_ADDR_PORT );
         value = inl( LFDD_PCI_DATA_PORT );
 
-        ppci->mass_buf[ i ]     = (unsigned char) value        & 0xff;
-        ppci->mass_buf[ i + 1 ] = (unsigned char)(value >> 8 ) & 0xff;
-        ppci->mass_buf[ i + 2 ] = (unsigned char)(value >> 16) & 0xff;
-        ppci->mass_buf[ i + 3 ] = (unsigned char)(value >> 24) & 0xff;
+        ppci->mass_buf[ i ]     = (uint8_t) value        & 0xff;
+        ppci->mass_buf[ i + 1 ] = (uint8_t)(value >> 8 ) & 0xff;
+        ppci->mass_buf[ i + 2 ] = (uint8_t)(value >> 16) & 0xff;
+        ppci->mass_buf[ i + 3 ] = (uint8_t)(value >> 24) & 0xff;
     }
 
     // Restore original PCI address
