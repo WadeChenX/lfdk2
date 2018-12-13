@@ -156,7 +156,7 @@ void lfdd_pci_write_byte( uint32_t value, uint32_t addr ) {
     outl( addr & 0xfffffffc, LFDD_PCI_ADDR_PORT );
 
     temp = inl( LFDD_PCI_DATA_PORT );
-    pr_info("pci_wb: orig 0x%08X\n", temp);
+    //pr_info("pci_wb: orig 0x%08X\n", temp);
 
     value = (value & 0xff) << ((addr & 0x03) * 8);
     temp &= ~(0x000000ff << ((addr & 0x03) * 8));
@@ -169,7 +169,7 @@ void lfdd_pci_write_byte( uint32_t value, uint32_t addr ) {
     outl( orig_idx, LFDD_PCI_ADDR_PORT );
 
     spin_unlock_irqrestore( &lfdd_lock, flags );
-    pr_info("pci_wb: 0x%08X\n", temp);
+    //pr_info("pci_wb: 0x%08X\n", temp);
 }
 
 
@@ -188,7 +188,7 @@ void lfdd_pci_write_word( uint32_t value, uint32_t addr ) {
     outl( addr & 0xfffffffc, LFDD_PCI_ADDR_PORT );
 
     temp = inl( LFDD_PCI_DATA_PORT );
-    pr_info("pci_ww: orig 0x%08X\n", temp);
+    //pr_info("pci_ww: orig 0x%08X\n", temp);
 
     value = (value & 0xffff) << ((addr & 0x02) * 8);
     temp &= ~(0x0000ffff << ((addr & 0x02) * 8));
@@ -201,7 +201,7 @@ void lfdd_pci_write_word( uint32_t value, uint32_t addr ) {
     outl( orig_idx, LFDD_PCI_ADDR_PORT );
 
     spin_unlock_irqrestore( &lfdd_lock, flags );
-    pr_info("pci_ww: 0x%08X\n", temp);
+    //pr_info("pci_ww: 0x%08X\n", temp);
 }
 
 
