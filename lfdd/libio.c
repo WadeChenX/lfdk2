@@ -40,10 +40,10 @@
 extern spinlock_t lfdd_lock;
 
 
-unsigned char lfdd_io_read_byte( unsigned int addr ) {
-
+uint8_t lfdd_io_read_byte( uint32_t addr ) 
+{
     unsigned long flags;
-    unsigned char value;
+    uint8_t value;
 
     spin_lock_irqsave( &lfdd_lock, flags );
 
@@ -55,10 +55,10 @@ unsigned char lfdd_io_read_byte( unsigned int addr ) {
 }
 
 
-unsigned short lfdd_io_read_word( unsigned int addr ) {
-
+uint16_t lfdd_io_read_word( uint32_t addr ) 
+{
     unsigned long flags;
-    unsigned short value;
+    uint16_t value;
 
     spin_lock_irqsave( &lfdd_lock, flags );
 
@@ -70,10 +70,10 @@ unsigned short lfdd_io_read_word( unsigned int addr ) {
 }
 
 
-unsigned int lfdd_io_read_dword( unsigned int addr ) {
-
+uint32_t lfdd_io_read_dword( uint32_t addr ) 
+{
     unsigned long flags;
-    unsigned int value;
+    uint32_t value;
 
     spin_lock_irqsave( &lfdd_lock, flags );
 
@@ -85,8 +85,8 @@ unsigned int lfdd_io_read_dword( unsigned int addr ) {
 }
 
 
-void lfdd_io_write_byte( unsigned char value, unsigned int addr ) {
-
+void lfdd_io_write_byte( uint8_t value, uint32_t addr ) 
+{
     unsigned long flags;
 
     spin_lock_irqsave( &lfdd_lock, flags );
@@ -97,8 +97,8 @@ void lfdd_io_write_byte( unsigned char value, unsigned int addr ) {
 }
 
 
-void lfdd_io_write_word( unsigned short value, unsigned int addr ) {
-
+void lfdd_io_write_word( uint16_t value, uint32_t addr ) 
+{
     unsigned long flags;
 
     spin_lock_irqsave( &lfdd_lock, flags );
@@ -109,8 +109,8 @@ void lfdd_io_write_word( unsigned short value, unsigned int addr ) {
 }
 
 
-void lfdd_io_write_dword( unsigned int value, unsigned int addr ) {
-
+void lfdd_io_write_dword( uint32_t value, uint32_t addr ) 
+{
     unsigned long flags;
 
     spin_lock_irqsave( &lfdd_lock, flags );
@@ -121,8 +121,8 @@ void lfdd_io_write_dword( unsigned int value, unsigned int addr ) {
 }
 
 
-void lfdd_io_read_256byte( struct lfdd_io_t *pio ) { 
-
+void lfdd_io_read_256byte( struct lfdd_io_t *pio )
+{
     int i;
     unsigned long flags;
 

@@ -38,8 +38,8 @@
 extern spinlock_t lfdd_lock;
 
 
-uint32_t lfdd_cal_pci_addr( uint8_t bus, uint8_t dev, uint8_t fun, uint8_t reg ) {
-
+uint32_t lfdd_cal_pci_addr( uint8_t bus, uint8_t dev, uint8_t fun, uint8_t reg ) 
+{
     uint32_t addr = 0;
 
     addr |= (bus & 0xff);
@@ -59,8 +59,8 @@ uint32_t lfdd_cal_pci_addr( uint8_t bus, uint8_t dev, uint8_t fun, uint8_t reg )
 }
 
 
-uint8_t lfdd_pci_read_byte( uint32_t addr ) {
-
+uint8_t lfdd_pci_read_byte( uint32_t addr ) 
+{
     unsigned long flags;
     uint32_t orig_idx;
     uint32_t value;
@@ -87,8 +87,8 @@ uint8_t lfdd_pci_read_byte( uint32_t addr ) {
 }
 
 
-uint16_t lfdd_pci_read_word( uint32_t addr ) {
-
+uint16_t lfdd_pci_read_word( uint32_t addr ) 
+{
     unsigned long flags;
     uint32_t orig_idx;
     uint32_t value;
@@ -115,8 +115,8 @@ uint16_t lfdd_pci_read_word( uint32_t addr ) {
 }
 
 
-uint32_t lfdd_pci_read_dword( uint32_t addr ) {
-
+uint32_t lfdd_pci_read_dword( uint32_t addr ) 
+{
     unsigned long flags;
     uint32_t orig_idx;
     uint32_t value;
@@ -141,8 +141,8 @@ uint32_t lfdd_pci_read_dword( uint32_t addr ) {
 }
 
 
-void lfdd_pci_write_byte( uint32_t value, uint32_t addr ) {
-
+void lfdd_pci_write_byte( uint32_t value, uint32_t addr ) 
+{
     unsigned long flags;
     uint32_t orig_idx;
     uint32_t temp;
@@ -173,8 +173,8 @@ void lfdd_pci_write_byte( uint32_t value, uint32_t addr ) {
 }
 
 
-void lfdd_pci_write_word( uint32_t value, uint32_t addr ) {
-
+void lfdd_pci_write_word( uint32_t value, uint32_t addr ) 
+{
     unsigned long flags;
     uint32_t orig_idx;
     uint32_t temp;
@@ -205,8 +205,8 @@ void lfdd_pci_write_word( uint32_t value, uint32_t addr ) {
 }
 
 
-void lfdd_pci_write_dword( uint32_t value, uint32_t addr ) {
-
+void lfdd_pci_write_dword( uint32_t value, uint32_t addr ) 
+{
     unsigned long flags;
     uint32_t orig_idx;
 
@@ -228,8 +228,8 @@ void lfdd_pci_write_dword( uint32_t value, uint32_t addr ) {
 }
 
 
-void lfdd_pci_read_256byte( struct lfdd_pci_t *ppci ) { 
-
+void lfdd_pci_read_256byte( struct lfdd_pci_t *ppci ) 
+{ 
     unsigned long flags;
     uint32_t orig_idx;
     int i, value;

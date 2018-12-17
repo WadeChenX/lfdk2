@@ -40,10 +40,10 @@
 extern spinlock_t lfdd_lock;
 
 
-unsigned char lfdd_mem_read_byte( unsigned int addr ) {
-
-    unsigned char __iomem *phymem;
-    unsigned int value;
+uint8_t lfdd_mem_read_byte( uint32_t addr ) 
+{
+    uint8_t __iomem *phymem;
+    uint32_t value;
 
     // Check the range of physical address
     if( ((0xffffffff - addr) <= LFDD_MASSBUF_SIZE) 
@@ -61,10 +61,10 @@ unsigned char lfdd_mem_read_byte( unsigned int addr ) {
 }
 
 
-unsigned short int lfdd_mem_read_word( unsigned int addr ) {
-
-    unsigned short int __iomem *phymem;
-    unsigned int value;
+uint16_t lfdd_mem_read_word( uint32_t addr ) 
+{
+    uint16_t __iomem *phymem;
+    uint32_t value;
 
     // Check the range of physical address
     if( ((0xffffffff - addr) <= LFDD_MASSBUF_SIZE) 
@@ -82,10 +82,10 @@ unsigned short int lfdd_mem_read_word( unsigned int addr ) {
 }
 
 
-unsigned int lfdd_mem_read_dword( unsigned int addr ) {
-
-    unsigned int __iomem *phymem;
-    unsigned int value;
+uint32_t lfdd_mem_read_dword( uint32_t addr ) 
+{
+    uint32_t __iomem *phymem;
+    uint32_t value;
 
     // Check the range of physical address
     if( ((0xffffffff - addr) <= LFDD_MASSBUF_SIZE) 
@@ -103,11 +103,11 @@ unsigned int lfdd_mem_read_dword( unsigned int addr ) {
 }
 
 
-void lfdd_mem_write_byte( unsigned int value, unsigned int addr ) {
-
+void lfdd_mem_write_byte( uint32_t value, uint32_t addr ) 
+{
     unsigned long flags;
-    unsigned char __iomem *phymem;
-    unsigned int temp;
+    uint8_t __iomem *phymem;
+    uint32_t temp;
 
     // Check the range of physical address
     if( ((0xffffffff - addr) <= LFDD_MASSBUF_SIZE) 
@@ -122,19 +122,19 @@ void lfdd_mem_write_byte( unsigned int value, unsigned int addr ) {
     spin_lock_irqsave( &lfdd_lock, flags );
     temp = *phymem;
     temp &= ~0xff;
-    temp |= (unsigned char)(value & 0xff);
-    *phymem = (unsigned int)temp;
+    temp |= (uint8_t)(value & 0xff);
+    *phymem = (uint32_t)temp;
     spin_unlock_irqrestore( &lfdd_lock, flags );
 
     phymem = NULL;
 }
 
 
-void lfdd_mem_write_word( unsigned int value, unsigned int addr ) {
-
+void lfdd_mem_write_word( uint32_t value, uint32_t addr ) 
+{
     unsigned long flags;
-    unsigned short int __iomem *phymem;
-    unsigned int temp;
+    uint16_t __iomem *phymem;
+    uint32_t temp;
 
     // Check the range of physical address
     if( ((0xffffffff - addr) <= LFDD_MASSBUF_SIZE) 
@@ -149,7 +149,7 @@ void lfdd_mem_write_word( unsigned int value, unsigned int addr ) {
     spin_lock_irqsave( &lfdd_lock, flags );
     temp = *phymem;
     temp &= ~0xffff;
-    temp |= (unsigned char)(value & 0xffff);
+    temp |= (uint16_t)(value & 0xffff);
     *phymem = temp;
     spin_unlock_irqrestore( &lfdd_lock, flags );
 
@@ -157,10 +157,10 @@ void lfdd_mem_write_word( unsigned int value, unsigned int addr ) {
 }
 
 
-void lfdd_mem_write_dword( unsigned int value, unsigned int addr ) {
-
+void lfdd_mem_write_dword( uint32_t value, uint32_t addr ) 
+{
     unsigned long flags;
-    unsigned int __iomem *phymem;
+    uint32_t __iomem *phymem;
 
     // Check the range of physical address
     if( ((0xffffffff - addr) <= LFDD_MASSBUF_SIZE) 
@@ -180,9 +180,9 @@ void lfdd_mem_write_dword( unsigned int value, unsigned int addr ) {
 }
 
 
-void lfdd_mem_read_256byte( struct lfdd_mem_t *pmem ) { 
-
-    unsigned char __iomem *phymem;
+void lfdd_mem_read_256byte( struct lfdd_mem_t *pmem )
+{
+    uint8_t __iomem *phymem;
     void __iomem *virtmem, *p;
     int i;
 
@@ -207,7 +207,7 @@ void lfdd_mem_read_256byte( struct lfdd_mem_t *pmem ) {
         }
     }
     else {
-    
+
         // Map physical memory address
         phymem = phys_to_virt( pmem->addr );
 
