@@ -36,13 +36,14 @@ After pci/pcie devices scaning, it will showed all devices on list,
 If this device is PCIE device, there is a '\*' preceding sign char.
 
 Also, you could press:  
-*KEY-UP, KEY-DOWN*  
+
+**KEY-UP, KEY-DOWN**  
   To move the cursor.
 
-*PAGE-UP, PAGE-DOWN*  
+**PAGE-UP, PAGE-DOWN**  
   For previous/next devices page.
 
-*Enter*  
+**Enter**  
   To show the PCI/PCIE configuration space.
 
 ## PCI/PCIE content
@@ -70,16 +71,17 @@ Of course, if the MMIO Base is not correct, we assume it's a pci device.
 And you could only see 256 Bytes pci configuration space.
 
 Also, you could press:  
-*KEY-UP, KEY-DOWN*  
+
+**KEY-UP, KEY-DOWN**  
   To move the cursor, and if it's a pcie device, above/below 256 Bytes range will show next/previous 256 Bytes.
 
-*PAGE-UP, PAGE-DOWN*  
+**PAGE-UP, PAGE-DOWN**  
   For previous/next device content.
 
-*F7*  
+**F7**  
   To change view-mode. There are 3 modes: Byte, Word, DWord.
 
-*\[any hex digit\]*  
+**\[any hex digit\]**  
   Start to input somthing, later press Enter to write the content if it's R/W register.
 
 
@@ -90,16 +92,17 @@ The screenshot is blow:
 After entering this function, you should input an address aligned by 256Bytes.
 
 Also, you could press:  
-*KEY-UP, KEY-DOWN*  
+
+**KEY-UP, KEY-DOWN**  
   To move the cursor. 
 
-*PAGE-UP, PAGE-DOWN*  
+**PAGE-UP, PAGE-DOWN**  
   For previous/next 256 Bytes content.
 
-*F7*  
+**F7**  
   To change view-mode. There are only 2 modes: Byte, Word
 
-*\[any hex digit\]*  
+**\[any hex digit\]**  
   Start to input somthing, later press Enter to write the content if it's R/W register.
 
 
@@ -110,10 +113,11 @@ The screenshot is blow:
 This function only show 256 Bytes content.
 
 Also, you could press:  
-*KEY-UP, KEY-DOWN*  
+
+**KEY-UP, KEY-DOWN**  
   To move the cursor. 
 
-*\[any hex digit\]*
+**\[any hex digit\]**  
   Start to input somthing, later press Enter to write the content if it's R/W register.
 
 ## Memory
@@ -123,16 +127,17 @@ The screenshot is blow:
 After entering this function, you should input an address aligned by 256Bytes.
 
 Also, you could press:  
-*KEY-UP, KEY-DOWN*  
+
+**KEY-UP, KEY-DOWN**  
   To move the cursor. 
 
-*PAGE-UP, PAGE-DOWN*  
+**PAGE-UP, PAGE-DOWN**  
   For previous/next 256 Bytes content.
 
-*F7*  
+**F7**  
   To change view-mode. There are 3 modes: Byte, Word, DWord
 
-*\[any hex digit\]*
+**\[any hex digit\]**  
   Start to input somthing, later press Enter to write the content if it's R/W register.
 
 # Notice
