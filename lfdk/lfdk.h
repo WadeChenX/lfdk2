@@ -34,7 +34,7 @@ typedef enum error {
 } error_t;
 
 
-#define LFDK_VERSION            "2.0.2"
+#define LFDK_VERSION            "2.0.2-1"
 #define LFDK_PROGNAME           "lfdk"
 #define LFDK_VERTEXT            LFDK_PROGNAME" version "LFDK_VERSION", Linux Firmware Debug Kit"
 #define LFDK_MAX_PATH           40
