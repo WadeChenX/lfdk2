@@ -12,6 +12,8 @@ Fork to extend & fix for Ubuntu 16.04 (Kernel 4.13.0-37-generic), how to use:
 * Ubuntu 16.04 (Kernel 4.13.0-37-generic)
 
 # Command line usage:
+
+```
 lfdk version 2.0.2-1, Linux Firmware Debug Kit
 Copyright (C) 2006 - 2010, Merck Hung <merckhung@gmail.com>
 Usage: lfdk \[-h\] \[-d /dev/lfdd\] \[-n ./pci.ids\] \[-b 255\]
@@ -21,6 +23,7 @@ Usage: lfdk \[-h\] \[-d /dev/lfdd\] \[-n ./pci.ids\] \[-b 255\]
         -b      Maximum PCI Bus number to scan, default is 255
         -B      PCIE MMIO base. It's 32bit hex digit preceding '0x' char.
         -h      print this message.
+```
 
 # Function
 
@@ -32,6 +35,16 @@ After pci/pcie devices scaning, it will showed all devices on list,
   seperately by page.
 If this device is PCIE device, there is a '\*' preceding sign char.
 
+Also, you could press:
+KEY-UP, KEY-DOWN  
+  To move the cursor.
+
+PAGE-UP, PAGE-DOWN  
+  For previous/next devices page.
+
+Enter  
+  To show the PCI/PCIE configuration space.
+
 Press KEY-UP, KEY-DOWN to move cursor, and 
 Press Page-Up, Page-Down to move devices page.
 Press Enter to show the PCI/PCIE configuration space.
@@ -40,9 +53,9 @@ Press Enter to show the PCI/PCIE configuration space.
 The screenshot is blow:  
 ![pci dev](doc_res/pci_dev.png)
 
-When you select a pci/pcie device, you could see the content on this screen.
+When you select a pci/pcie device, you could see the content on this screen.  
 If it's a pci device, you could only see total 256 Bytes content, 
-  and of course, it's accessed by IO Port (Cf8/CFC)
+  and of course, it's accessed by IO Port (Cf8/CFC).  
 If it's a pcie device, you could see total 1K Bytes content, 
   and of course, it's accessed by MMIO if there is a MMIO Base.
 
@@ -57,20 +70,20 @@ Otherwise, you could directly assign mmio base through typing:
 sudo bin/lfdk -B <MMIO BASE>
 ```
 
-Of course, if the MMIO Base is not correct, we assume it's a pci device.
+Of course, if the MMIO Base is not correct, we assume it's a pci device.  
 And you could only see 256 Bytes pci configuration space.
 
-Also, you could press:
-KEY-UP, KEY-DOWN
+Also, you could press:  
+KEY-UP, KEY-DOWN  
   To move the cursor, and if it's a pcie device, above/below 256 Bytes range will show next/previous 256 Bytes.
 
-PAGE-UP, PAGE-DOWN
+PAGE-UP, PAGE-DOWN  
   For previous/next device content.
 
-F7:
+F7  
   To change view-mode. There are 3 modes: Byte, Word, DWord.
 
-<any hex digit>:
+\[any hex digit\]  
   Start to input somthing, later press Enter to write the content if it's R/W register.
 
 
@@ -80,17 +93,17 @@ The screenshot is blow:
 
 After entering this function, you should input an address aligned by 256Bytes.
 
-Also, you could press:
-KEY-UP, KEY-DOWN
+Also, you could press:  
+KEY-UP, KEY-DOWN  
   To move the cursor. 
 
-PAGE-UP, PAGE-DOWN
+PAGE-UP, PAGE-DOWN  
   For previous/next 256 Bytes content.
 
-F7:
+F7  
   To change view-mode. There are only 2 modes: Byte, Word
 
-<any hex digit>:
+\[any hex digit\]  
   Start to input somthing, later press Enter to write the content if it's R/W register.
 
 
@@ -100,11 +113,11 @@ The screenshot is blow:
 
 This function only show 256 Bytes content.
 
-Also, you could press:
-KEY-UP, KEY-DOWN
+Also, you could press:  
+KEY-UP, KEY-DOWN  
   To move the cursor. 
 
-<any hex digit>:
+\[any hex digit\]
   Start to input somthing, later press Enter to write the content if it's R/W register.
 
 ## Memory
@@ -113,28 +126,28 @@ The screenshot is blow:
 
 After entering this function, you should input an address aligned by 256Bytes.
 
-Also, you could press:
-KEY-UP, KEY-DOWN
+Also, you could press:  
+KEY-UP, KEY-DOWN  
   To move the cursor. 
 
-PAGE-UP, PAGE-DOWN
+PAGE-UP, PAGE-DOWN  
   For previous/next 256 Bytes content.
 
-F7:
+F7  
   To change view-mode. There are 3 modes: Byte, Word, DWord
 
-<any hex digit>:
+\[any hex digit\]
   Start to input somthing, later press Enter to write the content if it's R/W register.
 
 # Notice
-You could see more log in lfdk.log located in current directory.
+You could see more log in lfdk.log located in current directory.  
 Also, you could change debug level to see more log. (default is 4)
 
 ```
 sudo bin/lfdk -D 5
 ```
 
-Level 5 is verbose mode.
+Level 5 is verbose mode.  
 If any number is bigger than 5, it is still level 5.
 
 If you have any questions, please feel free to contact me by E-Mail - Wade Chen(<frcnxv@gmail.com>).
