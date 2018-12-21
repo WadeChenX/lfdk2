@@ -35,6 +35,7 @@
 
 PCILPanel PCILScreen;
 PCIData lfdd_pci_list[ LFDK_MAX_PCIBUF ];
+uint64_t pcix_mmio_base=0;
 int curr_index, pci_list_len;
 const int RECORDS_PER_PAGE = 20; // 20 records per page
 
@@ -86,10 +87,11 @@ void PrintPCILScreen( void ) {
                     wattrset( PCILScreen.vendev, COLOR_PAIR( WHITE_BLUE ) | A_BOLD );
 
                     if (i<pci_list_len) {
+                            char pcie_sign = lfdd_pci_list[i].phy_base ? '*' : ' ';
                             if( !lfdd_pci_list[ i ].ventxt[ 0 ] ) {
-                                    wprintw( PCILScreen.devname, "%4.4X, ", lfdd_pci_list[ i ].venid );
+                                    wprintw( PCILScreen.devname, "%c %4.4X, ", pcie_sign, lfdd_pci_list[ i ].venid );
                             } else {
-                                    wprintw( PCILScreen.devname, "%.12s, ", lfdd_pci_list[ i ].ventxt );
+                                    wprintw( PCILScreen.devname, "%c %.10s, ", pcie_sign, lfdd_pci_list[ i ].ventxt );
                             }
 
                             if( !lfdd_pci_list[ i ].devtxt[ 0 ] ) {

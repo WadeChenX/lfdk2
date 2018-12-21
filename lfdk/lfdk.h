@@ -30,6 +30,7 @@ typedef enum error {
         ERR_OPEN_FILE,
         ERR_REQ_IO,
         ERR_INVALID_PARAM,
+        ERR_TEST_FAIL,
 } error_t;
 
 
@@ -119,8 +120,9 @@ typedef enum message {
 
 
 typedef struct {
-        int fd_lfdd;
-        int debug_lv;
+        int             fd_lfdd;
+        int             debug_lv;
+        uint64_t        phy_pcix_mmio_base;
 } st_cmd_info;
 
 typedef struct {

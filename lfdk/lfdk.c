@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <time.h>
+#include <inttypes.h>
 
 #include <ncurses.h>
 #include <panel.h>
@@ -55,7 +56,9 @@ static void usage( void ) {
     fprintf( stderr, "Usage: "LFDK_PROGNAME" [-h] [-d /dev/lfdd] [-n ./pci.ids] [-b 255]\n" );
     fprintf( stderr, "\t-n\tFilename of PCI Name Database, default is /usr/share/misc/pci.ids\n" );
     fprintf( stderr, "\t-d\tDevice name of Linux Firmware Debug Driver, default is /dev/lfdd\n" );
+    fprintf( stderr, "\t-D\tDebug level. All message logged to lfdd.log\n");
     fprintf( stderr, "\t-b\tMaximum PCI Bus number to scan, default is 255\n" );
+    fprintf( stderr, "\t-B\tPCIE MMIO base. It's 32bit hex digit preceding '0x' char.\n");
     fprintf( stderr, "\t-h\tprint this message.\n");
     fprintf( stderr, "\n");
 }
@@ -478,7 +481,7 @@ int main( int argc, char **argv ) {
     strncpy( pciname, LFDK_DEFAULT_PCINAME, LFDK_MAX_PATH );
 
 
-    while( (c = getopt( argc, argv, "D:b:n:d:h" )) != EOF ) {
+    while( (c = getopt( argc, argv, "D:b:n:d:hB:" )) != EOF ) {
         switch( c ) {
             //
             // Change default path of device
@@ -502,8 +505,13 @@ int main( int argc, char **argv ) {
                 break;
             case 'D':
                 debug_level = atoi(optarg);
-                if (debug_level < DEBUG_MAX) {
-                        win_manager.cmd_info.debug_lv = debug_level;
+                win_manager.cmd_info.debug_lv = debug_level >= DEBUG_MAX ? DEBUG_MAX-1 : debug_level;
+                break;
+            case 'B':
+                win_manager.cmd_info.phy_pcix_mmio_base = strtoll(optarg, NULL, 16);
+                if (win_manager.cmd_info.phy_pcix_mmio_base >= (1ULL<<32)){
+                    fprintf( stderr, "We only support below 4GB MMIO base !! \n");
+                    return 1;
                 }
                 break;
             case 'h' :
@@ -512,22 +520,9 @@ int main( int argc, char **argv ) {
                 return 1;
         }
     }
-
-    //init debug function
-    if (win_manager.cmd_info.debug_lv) {
-            ret = debug_init();
-            if (ret) {
-                    fprintf(stderr, "Init debug function error\n");
-                    goto err_init_dbg;
-            }
-            log_c("Debug init done\n");
-    }
-
-
-
     //
     // Start communicate with LFDD I/O control driver
-	//
+    //
     fd = open( device, O_RDWR );
     if( fd < 0 ) {
         fprintf( stderr, "Cannot open device: %s\n", device );
@@ -536,7 +531,15 @@ int main( int argc, char **argv ) {
     }
     win_manager.cmd_info.fd_lfdd = fd;
 
-
+    //init debug function
+    if (win_manager.cmd_info.debug_lv) {
+            ret = debug_init(&win_manager.cmd_info);
+            if (ret) {
+                    fprintf(stderr, "Init debug function error\n");
+                    goto err_init_dbg;
+            }
+            logx_c("Debug init done\n");
+    }
 
     ret = handle_init_event();
     if (ret) {
@@ -613,10 +616,10 @@ int main( int argc, char **argv ) {
 err_out:
     endwin();
 err_init_ev:
+    debug_exit(&win_manager.cmd_info);
+err_init_dbg:
     close( fd );
 err_open_dev:
-    debug_exit();
-err_init_dbg:
     return ret;
 }
 

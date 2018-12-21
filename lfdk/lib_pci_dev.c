@@ -46,8 +46,8 @@ extern int pci_list_len;
 extern int curr_index, pci_list_len;
 
 PCIPanel PCIScreen;
-struct lfdd_pci_t lfdd_pci_data;
-static int x, y;
+struct lfdd_pcix_t lfdd_pci_data;
+static int x, y, buff_page;
 
 static uint32_t wbuf;
 static int input;
@@ -56,20 +56,26 @@ static char offset_text[512] = {0};
 
 static char *CreateOffsetText()
 {
+        uint16_t pos = 0;
+
+        pos = buff_page + y * LFDK_BYTE_PER_LINE + x;
         if (display_mode == BYTE_MODE) {
                 sprintf(offset_text,
-                  "0000 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n"
-                  "0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0" 
+                  "%4.4X 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F\n"
+                  "0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0", 
+                  pos
                   );
         } else if (display_mode == WORD_MODE) {
                 sprintf(offset_text,
-                  "0000 0000  0002  0004  0006  0008  000A  000C  000E\n"
-                  "0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0" 
+                  "%4.4X 0000  0002  0004  0006  0008  000A  000C  000E\n"
+                  "0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0",
+                  pos
                   );
         } else {
                 sprintf(offset_text,
-                  "0000 00000000     00000004     00000008     0000000C\n"
-                  "0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0" 
+                  "%4.4X 00000000     00000004     00000008     0000000C\n"
+                  "0000\n0010\n0020\n0030\n0040\n0050\n0060\n0070\n0080\n0090\n00A0\n00B0\n00C0\n00D0\n00E0\n00F0",
+                  pos
                   );
         }
         return offset_text;
@@ -129,7 +135,8 @@ void PrintPCIScreen( int fd ) {
         lfdd_pci_data.bus = lfdd_pci_list[ curr_index ].bus;
         lfdd_pci_data.dev = lfdd_pci_list[ curr_index ].dev;
         lfdd_pci_data.fun = lfdd_pci_list[ curr_index ].fun;
-        lfdd_pci_data.reg = 0;
+        lfdd_pci_data.reg = buff_page;
+        lfdd_pci_data.phy_base = lfdd_pci_list[ curr_index ].phy_base;
         LFDD_IOCTL( fd, LFDD_PCI_READ_256BYTE, lfdd_pci_data );
 
 
@@ -223,13 +230,14 @@ void PrintPCIScreen( int fd ) {
         } // for i
 }
 
-void WritePCIByteValue(int fd) 
+static void WritePCIValue(int fd) 
 {
         //TODO: need to write data according display mode
         lfdd_pci_data.bus = lfdd_pci_list[ curr_index ].bus;
         lfdd_pci_data.dev = lfdd_pci_list[ curr_index ].dev;
         lfdd_pci_data.fun = lfdd_pci_list[ curr_index ].fun;
-        lfdd_pci_data.reg = y * LFDK_BYTE_PER_LINE + x;
+        lfdd_pci_data.reg = buff_page + y * LFDK_BYTE_PER_LINE + x;
+        lfdd_pci_data.phy_base = lfdd_pci_list[ curr_index ].phy_base;
         lfdd_pci_data.buf = wbuf;
 
         if (display_mode == BYTE_MODE) {
@@ -282,7 +290,7 @@ static int pci_dev_key_press(st_cmd_info *p_cmd, void *data)
         if (input) {
                 switch(*p_key_code){
                         case 0x0a: //enter
-                                WritePCIByteValue(p_cmd->fd_lfdd);
+                                WritePCIValue(p_cmd->fd_lfdd);
                                 input = 0;
                                 wbuf = 0;
                                 break;
@@ -317,11 +325,23 @@ static int pci_dev_key_press(st_cmd_info *p_cmd, void *data)
         } else { //display mode
                 switch(*p_key_code){
                         case KEY_UP:
-                                if (y>0) y--;
+                                if (y>0) {
+                                        y--;
+                                } else if (lfdd_pci_list[ curr_index ].phy_base) {
+                                        if (buff_page >= LFDD_MASSBUF_SIZE) {
+                                                buff_page -= LFDD_MASSBUF_SIZE;
+                                        }
+                                }
                                 break;
 
                         case KEY_DOWN:
-                                if (y < 15) y++;
+                                if (y < 15) {
+                                        y++;
+                                } else if (lfdd_pci_list[ curr_index ].phy_base) {
+                                        if (buff_page + LFDD_MASSBUF_SIZE < 0x1000) {
+                                                buff_page += LFDD_MASSBUF_SIZE;
+                                        }
+                                }
                                 break;
 
                         case KEY_LEFT:
@@ -335,11 +355,17 @@ static int pci_dev_key_press(st_cmd_info *p_cmd, void *data)
                                 break;
 
                         case KEY_NPAGE:
-                                if (curr_index < pci_list_len-1) curr_index++;
+                                if (curr_index < pci_list_len-1) {
+                                        curr_index++;
+                                        buff_page = 0;
+                                }
                                 break;
 
                         case KEY_PPAGE:
-                                if (curr_index > 0) curr_index--;
+                                if (curr_index > 0) {
+                                        curr_index--;
+                                        buff_page = 0;
+                                }
                                 break;
 
                         case KEY_F(7):
@@ -371,7 +397,7 @@ static int pci_dev_key_press(st_cmd_info *p_cmd, void *data)
 static int pci_dev_lost_focus(st_cmd_info *p_cmd, void *data)
 {
         log_i("%s\n", __func__);
-        x = y = input = wbuf = 0;
+        x = y = input = wbuf = buff_page = 0;
         ClearPCIScreen();
         return 0;
 }

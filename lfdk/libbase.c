@@ -53,7 +53,7 @@ void PrintBaseScreen( void )
         // Base Screen
         //
         PrintFixedWin( BaseScreen, logo, 1, 80, 0, 0, WHITE_RED, "Linux Firmware Debug Kit "LFDK_VERSION );
-        PrintFixedWin( BaseScreen, help, 1, 80, 23, 0, BLACK_WHITE, "(Q)uit (P)CI (M)emory (I)O CM(O)S" );
+        PrintFixedWin( BaseScreen, help, 1, 80, 23, 0, BLACK_WHITE, "(Q)uit (M)emory (I)O CM(O)S (P)CI/PCIE" );
 
         // Update timer
         //

@@ -47,7 +47,7 @@
         return -EFAULT;                                                                 \
     }                                                                                   \
                                                                                         \
-    DATA.buf = RFUNC( lfdd_cal_pci_addr( DATA.bus, DATA.dev, DATA.fun, DATA.reg ) );    \
+    DATA.buf = RFUNC(&DATA);                                                             \
                                                                                         \
     return copy_to_user( argp, &DATA, sizeof( DATA ) );                                 \
 }
@@ -60,7 +60,7 @@
         return -EFAULT;                                                                 \
     }                                                                                   \
                                                                                         \
-    WFUNC( DATA.buf, lfdd_cal_pci_addr( DATA.bus, DATA.dev, DATA.fun, DATA.reg ) );     \
+    WFUNC(&DATA);                                                                        \
     return 0;                                                                           \
 }
 
@@ -98,56 +98,42 @@ static int lfdd_open( struct inode *inode, struct file *file )
         return 0;
 }
 
+//
+// implement kernel log function
+//
+static char k_log_buf[512];
+static ssize_t lfdd_write(struct file *filp, const char __user *buf, size_t len, loff_t *off)
+{
+        int copy_len = len;
+
+        if (copy_len >= sizeof(k_log_buf))
+                copy_len = sizeof(k_log_buf);
+
+        if( copy_from_user(k_log_buf, buf, copy_len) ) {
+                return -EFAULT;
+        }
+        pr_info("%s", k_log_buf);
+
+        return len;
+}
+
 
 static int lfdd_release( struct inode *inode, struct file *file ) 
 {
         return 0;
 }
 
-char cmd_str_table[][64] = {
-	"PCI_READ_BYTE",
-	"PCI_READ_WORD",
-	"PCI_READ_DWORD",
-	"PCI_WRITE_BYTE",
-	"PCI_WRITE_WORD",
-	"PCI_WRITE_DWORD",
-	"PCI_READ_256BYTE",
-	"PCIE_READ_BYTE",
-	"PCIE_READ_WORD",
-	"PCIE_READ_DWORD",
-	"PCIE_WRITE_BYTE",
-	"PCIE_WRITE_WORD",
-	"PCIE_WRITE_DWORD",
-	"PCIE_READ_256BYTE",
-	"MEM_READ_BYTE",
-	"MEM_READ_WORD",
-	"MEM_READ_DWORD",
-	"MEM_WRITE_BYTE",
-	"MEM_WRITE_WORD",
-	"MEM_WRITE_DWORD",
-	"MEM_READ_256BYTE",
-	"IO_READ_BYTE",
-	"IO_READ_WORD",
-	"IO_READ_DWORD",
-	"IO_WRITE_BYTE",
-	"IO_WRITE_WORD",
-	"IO_WRITE_DWORD",
-	"IO_READ_256BYTE",
-        NULL
-};
-
 static long lfdd_ioctl( struct file *file, unsigned int cmd, unsigned long arg ) 
 {
-        struct lfdd_pci_t lfdd_pci_data;
+        struct lfdd_pcix_t lfdd_pcix_data;
         struct lfdd_mem_t lfdd_mem_data;
         struct lfdd_io_t lfdd_io_data;
         void __user *argp = (void __user *)arg;
 
-        if (cmd < LFDD_IOCTL_CMD_MAX &&
-                cmd != LFDD_PCI_READ_256BYTE &&
+        if (    cmd != LFDD_PCI_READ_256BYTE &&
                 cmd != LFDD_MEM_READ_256BYTE &&
                 cmd != LFDD_IO_READ_256BYTE) { 
-                pr_info("%s\n", cmd_str_table[cmd]);
+              pr_debug("[0x%08X]\n", cmd);
         }
 
         switch( cmd ) {
@@ -155,33 +141,33 @@ static long lfdd_ioctl( struct file *file, unsigned int cmd, unsigned long arg )
                 // PCI Functions
                 //
                 case LFDD_PCI_READ_256BYTE:
-                        if( copy_from_user( &lfdd_pci_data, argp, sizeof( struct lfdd_pci_t ) ) ) {
+                        if( copy_from_user( &lfdd_pcix_data, argp, sizeof( struct lfdd_pcix_t ) ) ) {
                                 pr_info("Copy pci cmd fail\n");
                                 return -EFAULT;
                         }
 
-                        memset( lfdd_pci_data.mass_buf, 0, LFDD_MASSBUF_SIZE );
-                        lfdd_pci_read_256byte( &lfdd_pci_data );
+                        memset( lfdd_pcix_data.mass_buf, 0, LFDD_MASSBUF_SIZE );
+                        lfdd_pcix_read_256byte( &lfdd_pcix_data );
 
-                        return copy_to_user( argp, &lfdd_pci_data, sizeof( struct lfdd_pci_t ) );
+                        return copy_to_user( argp, &lfdd_pcix_data, sizeof( struct lfdd_pcix_t ) );
 
                 case LFDD_PCI_READ_BYTE:
-                        LFDD_PCI_READ( lfdd_pci_read_byte, lfdd_pci_data );
+                        LFDD_PCI_READ( lfdd_pcix_read_byte, lfdd_pcix_data );
 
                 case LFDD_PCI_READ_WORD:
-                        LFDD_PCI_READ( lfdd_pci_read_word, lfdd_pci_data );
+                        LFDD_PCI_READ( lfdd_pcix_read_word, lfdd_pcix_data );
 
                 case LFDD_PCI_READ_DWORD:
-                        LFDD_PCI_READ( lfdd_pci_read_dword, lfdd_pci_data );
+                        LFDD_PCI_READ( lfdd_pcix_read_dword, lfdd_pcix_data );
 
                 case LFDD_PCI_WRITE_BYTE:
-                        LFDD_PCI_WRITE( lfdd_pci_write_byte, lfdd_pci_data );
+                        LFDD_PCI_WRITE( lfdd_pcix_write_byte, lfdd_pcix_data );
 
                 case LFDD_PCI_WRITE_WORD:
-                        LFDD_PCI_WRITE( lfdd_pci_write_word, lfdd_pci_data );
+                        LFDD_PCI_WRITE( lfdd_pcix_write_word, lfdd_pcix_data );
 
                 case LFDD_PCI_WRITE_DWORD:
-                        LFDD_PCI_WRITE( lfdd_pci_write_dword, lfdd_pci_data );
+                        LFDD_PCI_WRITE( lfdd_pcix_write_dword, lfdd_pcix_data );
 
                 case LFDD_MEM_READ_256BYTE:
                         if( copy_from_user( &lfdd_mem_data, argp, sizeof( struct lfdd_mem_t ) ) ) {
@@ -241,6 +227,7 @@ static struct file_operations lfdd_fops = {
         .unlocked_ioctl = lfdd_ioctl,
         .compat_ioctl =   lfdd_ioctl,
         .open       =   lfdd_open,
+        .write      =   lfdd_write,
         .release    =   lfdd_release,
 };
 

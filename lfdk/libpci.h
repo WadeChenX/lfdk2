@@ -5,6 +5,7 @@
 #define LFDK_MAX_PCIBUS			256
 #define LFDK_DEFAULT_PCINAME    "/usr/share/misc/pci.ids"
 #define LFDK_MAX_PCINAME        75
+#define ACPI_MCFG_PATH          "/sys/firmware/acpi/tables/MCFG"
 
 typedef struct {
 
@@ -40,15 +41,14 @@ typedef struct {
 } PCILPanel;
 
 typedef struct {
-
-        unsigned short int      venid;
-        unsigned short int      devid;
-        unsigned char           bus;
-        unsigned char           dev;
-        unsigned char           fun;
-        unsigned char           ventxt[ LFDK_MAX_PCINAME + 1 ];
-        unsigned char           devtxt[ LFDK_MAX_PCINAME + 1 ];
-
+        uint16_t      venid;
+        uint16_t      devid;
+        uint8_t       bus;
+        uint8_t       dev;
+        uint8_t       fun;
+        uint8_t       ventxt[ LFDK_MAX_PCINAME + 1 ];
+        uint8_t       devtxt[ LFDK_MAX_PCINAME + 1 ];
+        uint64_t      phy_base;
 } PCIData;
 
 
